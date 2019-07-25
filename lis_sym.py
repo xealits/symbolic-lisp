@@ -53,46 +53,6 @@ def atom(token):
 
 ################ Environments
 
-def binary_operator(oper):
-    return lambda (a, b): oper(a, b)
-
-def standard_env():
-    "An environment with some Scheme standard procedures."
-    env = Env()
-    env.update(vars(math)) # sin, cos, sqrt, pi, ...
-    env.update({
-        #'+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
-        'add': lambda (a, b): op.add(a, b),
-        '+': binary_operator(op.add),
-        '-': binary_operator(op.sub),
-        '*': binary_operator(op.mul),
-        '/': binary_operator(op.truediv),
-        '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
-        'abs':     abs,
-        'append':  op.add,  
-        'apply':   apply,
-        'begin':   lambda *x: x[-1],
-        'car':     lambda x: x[0],
-        'cdr':     lambda x: x[1:], 
-        'cons':    lambda x,y: [x] + y,
-        'eq?':     op.is_, 
-        'equal?':  op.eq, 
-        'length':  len, 
-        'list':    lambda *x: list(x), 
-        'list?':   lambda x: isinstance(x,list), 
-        'map':     map,
-        'max':     max,
-        'min':     min,
-        'not':     op.not_,
-        'null?':   lambda x: x == [], 
-        'number?': lambda x: isinstance(x, Number),   
-        'procedure?': callable,
-        'round':   round,
-        'symbol?': lambda x: isinstance(x, Symbol),
-        'exit': lambda _: exit(),
-    })
-    return env
-
 class Env(dict):
     "An environment: a dict of {'var':val} pairs, with an outer Env."
     def __init__(self, parms=(), args=(), outer=None):
@@ -101,10 +61,14 @@ class Env(dict):
     def find(self, var):
         "Find the innermost Env where var appears."
         # TODO: make a hook for top-most names to embed into shell or python
-        return self if (var in self) else self.outer.find(var)
+        if (var in self):
+            return self
+        elif self.outer is None:
+            return None
+        else:
+            return self.outer.find(var)
 
-global_env = standard_env()
-
+global_env = Env()
 ################ Interaction: A REPL
 
 def repl(prompt='lis.py> '):
@@ -174,11 +138,12 @@ class SymbolicProcedure(object):
         return eval(self.body, Env(self.parms, args, self.env))
 
 class Procedure(object):
-    "A user-defined Scheme procedure."
+    "A user-defined Scheme^WSymbolic procedure."
     def __init__(self, parms, body, env):
         self.parms, self.body, self.env = parms, body, env
     def __call__(self, *args): 
-        return eval(self.body, Env(self.parms, args, self.env))
+        #return eval(self.body, Env(self.parms, args, self.env))
+        return basic_eval(self.body, Env(self.parms, args, self.env))
 
 ################ eval
 
@@ -189,14 +154,28 @@ def var_name(var):
 def basic_eval(x, env=global_env):
     "Find a symbol in an environment or the first symbol of a list."
 
+    logging.debug('x: %s' % repr(x))
+
     # constants
     #if isinstance(x, Symbol):      # symbol is considered a literal
     #    return x
     #elif not isinstance(x, List):  # constant literal
     #    return x                
     # actually, not lists are constants
-    if not isinstance(x, List):  # constant literal
-        return x                
+
+    # TODO: there is a confusion with refering to variables
+    # I made passing symbols first-class
+    # but now `eval` does not `get` the variables
+    if isinstance(x, Symbol):
+        if env.find(x):
+            return env.find(x)[var_name(x)]
+        else:
+            return x
+
+    elif not isinstance(x, List):  # constant literal
+        return x
+    elif isinstance(x, List) and len(x) == 0:
+        return x
 
     # if, execution branching
     #elif x[0] == 'if':             # (if test conseq alt)
@@ -207,6 +186,13 @@ def basic_eval(x, env=global_env):
             return basic_eval(x[2])
         else:
             return basic_eval(x[3])
+
+    # TODO: there is a confusion with passing parameters or lists
+    # (basic_eval 1 2 3) =? (basic_eval [1 2 3])?
+    # here is to resolve it quickly:
+    # basic_eval takes only 1 argument!
+    elif x[0] == 'basic_eval':
+        return basic_eval(x[1])
 
     # namespace manipulation
     elif x[0] == 'get':      # variable reference
@@ -226,9 +212,26 @@ def basic_eval(x, env=global_env):
         var = basic_eval(var_exp)
         env.find(var)[var_name(var)] = basic_eval(exp, env)
 
+    # TODO make define a part of set! ?
+    elif x[0] == 'define':
+        #(_, var, exp) = x
+        #env[var] = eval(exp, env)
+        (_, var_exp, exp) = x
+        var = basic_eval(var_exp)
+        env[var] = basic_eval(exp, env)
+
+    # User's procedures
+    elif x[0] == 'lambda':         # (lambda (var...) body)
+        (_, parms, body) = x
+        return Procedure(parms, body, env)
+        # it calls basic_eval on body in the env extended with params
+        # TODO so, it works in lexical scope of the definition! add namespaces!
+        # but if you keep everything global there is no difference
+
     # a user's list call
     else:                          # (proc arg...)
         first_symbol = basic_eval(x[0], env)
+        logging.debug('calling first_symbol: %s' % repr(first_symbol))
         # usually it must return a callable procedure
         # but here I extend this to 3 types:
         # a ready procedure
@@ -237,14 +240,17 @@ def basic_eval(x, env=global_env):
 
         # TODO: these proc calls need current and lexical name spaces!
         if callable(first_symbol):
-            return proc(x[1:])
+            logging.debug('calling procedure: %d' % id(first_symbol))
+            #logging.debug('environment of the call: %s' % repr(first_symbol.env))
+            return first_symbol(x[1:])
         elif isinstance(first_symbol, Symbol):
-            logging.debug('x: %s' % repr(x))
-            logging.debug('first_symbol: %s' % repr(first_symbol))
             proc = env.find(first_symbol)[first_symbol]
-            logging.debug('x[1:]: %s' % repr(x[1:]))
-            return proc(x[1:])
+            logging.debug('found proc %d with params x[1:]: %s' % (id(proc), repr(x[1:])))
+            res = proc(x[1:])
+            logging.debug('result %s' % repr(res))
+            return res
         elif isinstance(first_symbol, int):
+            logging.debug('calling number: %s' % repr(first_symbol))
             last_value = None
             for i in range(first_symbol):
                 basic_eval(x[1:])
@@ -289,10 +295,67 @@ def eval(x, env=global_env):
         # call the symbol proc with evaluated arguments
         return proc(*args)
 
+
+def binary_operator(oper):
+    return lambda (a, b): oper(a, b)
+
+def standard_env():
+    "An environment with some Scheme standard procedures."
+    env = Env()
+    env.update(vars(math)) # sin, cos, sqrt, pi, ...
+    env.update({
+        #'+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
+        #'add': lambda (a, b): op.add(a, b),
+        'add': binary_operator(op.add),
+        'sub': binary_operator(op.sub),
+        'mul': binary_operator(op.mul),
+        'div': binary_operator(op.truediv),
+
+        #'+': lambda
+        #'-': lambda
+        #'*': lambda
+        #'/': lambda
+
+        '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
+        'abs':     abs,
+        'append':  op.add,  
+        'apply':   apply,
+        'begin':   lambda *x: x[-1],
+        'car':     lambda x: x[0],
+        'cdr':     lambda x: x[1:], 
+        'cons':    lambda x,y: [x] + y,
+        'eq?':     op.is_, 
+        'equal?':  op.eq, 
+        'length':  len, 
+        'list':    lambda *x: list(x), 
+        'list?':   lambda x: isinstance(x,list), 
+        #'map':     map,
+        'map':     lambda x: map(basic_eval(x[0]), x[1:]),
+        #(basic_eval (map basic_eval (foo bar)))
+        'eval':    lambda x: basic_eval(map(basic_eval, x)),
+        'basic_eval': basic_eval, # not defined
+        'max':     max,
+        'min':     min,
+        'not':     op.not_,
+        'null?':   lambda x: x == [], 
+        'number?': lambda x: isinstance(x, Number),   
+        'procedure?': callable,
+        'round':   round,
+        'symbol?': lambda x: isinstance(x, Symbol),
+        'exit': lambda _: exit(),
+    })
+    return env
+
+global_env.update(standard_env())
+
 tests = [
-'(+ 1 2)',
+#'(+ 1 2)',
 '(add 1 2)',
 ]
+
+# (define + (lambda (x y) (eval add x y)))
+# TODO: now local namespace does not work
+#       because it calls things in the lexical scope of `add`, not in `+`!!!
 
 def test():
     for t in tests:
