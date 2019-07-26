@@ -9,7 +9,7 @@ from sys import stderr
 
 import argparse
 import logging
-
+import pdb
 
 ################ Types
 
@@ -141,7 +141,7 @@ class Procedure(object):
     "A user-defined Scheme^WSymbolic procedure."
     def __init__(self, parms, body, env):
         self.parms, self.body, self.env = parms, body, env
-    def __call__(self, *args): 
+    def __call__(self, args): 
         #return eval(self.body, Env(self.parms, args, self.env))
         return basic_eval(self.body, Env(self.parms, args, self.env))
 
@@ -170,6 +170,7 @@ def basic_eval(x, env=global_env):
         if env.find(x):
             return env.find(x)[var_name(x)]
         else:
+            logging.debug('Symbol %s not found' % repr(x))
             return x
 
     elif not isinstance(x, List):  # constant literal
@@ -192,7 +193,28 @@ def basic_eval(x, env=global_env):
     # here is to resolve it quickly:
     # basic_eval takes only 1 argument!
     elif x[0] == 'basic_eval':
-        return basic_eval(x[1])
+        return basic_eval(x[1], env)
+    # eval evaluates each part of the list in current env
+    # and launches the first symbol with the results
+    # also, it must do it in recursion for the whole call tree...
+    # and it stops at evaluating arguments, which contain the call tree...
+    elif x[0] == 'eval':
+        # eval also has only 1 argument
+        #first_symbol = x[1]
+        #args = x[]
+        ##pdb.set_trace()
+        #for arg in x[2:]:
+        #    evaluated_arg = basic_eval(arg, env)
+        #    args.append(evaluated_arg)
+        #    #args.append(eval(arg, env))
+        #evaluated_call = [first_symbol] + args
+        if isinstance(x[1], List):
+            args = [basic_eval(exp, env) for exp in x[1]]
+        else:
+            args = x[1]
+        # eval x translates to basic_eval x
+        logging.debug("eval call: %s" % repr(args))
+        return basic_eval(args, env)
 
     # namespace manipulation
     elif x[0] == 'get':      # variable reference
@@ -231,7 +253,7 @@ def basic_eval(x, env=global_env):
     # a user's list call
     else:                          # (proc arg...)
         first_symbol = basic_eval(x[0], env)
-        logging.debug('calling first_symbol: %s' % repr(first_symbol))
+        logging.debug('calling first_symbol %s: %s' % (repr(x[0]), repr(first_symbol)))
         # usually it must return a callable procedure
         # but here I extend this to 3 types:
         # a ready procedure
@@ -240,7 +262,7 @@ def basic_eval(x, env=global_env):
 
         # TODO: these proc calls need current and lexical name spaces!
         if callable(first_symbol):
-            logging.debug('calling procedure: %d' % id(first_symbol))
+            logging.debug('calling procedure: %d with %s' % (id(first_symbol), x[1:]))
             #logging.debug('environment of the call: %s' % repr(first_symbol.env))
             return first_symbol(x[1:])
         elif isinstance(first_symbol, Symbol):
@@ -332,7 +354,7 @@ def standard_env():
         #'map':     map,
         'map':     lambda x: map(basic_eval(x[0]), x[1:]),
         #(basic_eval (map basic_eval (foo bar)))
-        'eval':    lambda x: basic_eval(map(basic_eval, x)),
+        #'eval':    lambda x: basic_eval(map(basic_eval, x)),
         'basic_eval': basic_eval, # not defined
         'max':     max,
         'min':     min,
@@ -351,11 +373,15 @@ global_env.update(standard_env())
 tests = [
 #'(+ 1 2)',
 '(add 1 2)',
+'(define + (lambda (x y) (eval (add (eval (eval x)) (eval (eval y))))))',
+'(+ 1 2)',
+'(+ (+ 11 28) 2)',
 ]
 
 # (define + (lambda (x y) (eval add x y)))
 # TODO: now local namespace does not work
 #       because it calls things in the lexical scope of `add`, not in `+`!!!
+
 
 def test():
     for t in tests:
