@@ -216,6 +216,17 @@ def basic_eval(x, env=global_env):
         logging.debug("eval call: %s" % repr(args))
         return basic_eval(args, env)
 
+    # embedded begin TODO: move it to user-space?
+    elif x[0] == 'begin':
+        # almost same as eval!
+        if isinstance(x[1], List):
+            args = [basic_eval(exp, env) for exp in x[1]]
+        else:
+            args = x[1]
+        logging.debug("begin call: %s" % repr(args))
+        # the only difference with eval:
+        return args[-1]
+
     # namespace manipulation
     elif x[0] == 'get':      # variable reference
         var = basic_eval(x[1])
@@ -342,7 +353,9 @@ def standard_env():
         'abs':     abs,
         'append':  op.add,  
         'apply':   apply,
-        'begin':   lambda *x: x[-1],
+        #'begin':   lambda *x: x[-1],
+        # (begin (add 1 2) (sub 3 4))
+        # ((add 1 2) (sub 3 4))
         'car':     lambda x: x[0],
         'cdr':     lambda x: x[1:], 
         'cons':    lambda x,y: [x] + y,
@@ -376,7 +389,18 @@ tests = [
 '(define + (lambda (x y) (eval (add (eval (eval x)) (eval (eval y))))))',
 '(+ 1 2)',
 '(+ (+ 11 28) 2)',
+'(begin ((add 1 2) (add 3 4)))',
+'''(define ++ (lambda (x y)
+    (begin ((set! x (eval (eval x))) (set! y (eval (eval y))) (eval (add x y))))
+    ))''',
+'(++ 1 2)',
+'(++ (++ 11 28) 2)',
 ]
+
+#'begin':   lambda *x: x[-1],
+# (begin (add 1 2) (sub 3 4))
+# ((add 1 2) (sub 3 4))
+#'(define + (lambda (x y) (eval (add (eval (eval x)) (eval (eval y))))))',
 
 # (define + (lambda (x y) (eval add x y)))
 # TODO: now local namespace does not work
