@@ -114,8 +114,8 @@ class SymbolicProcedure(object):
         '''
 
         if self.macro:
-          # immediately 
-          args = 
+          # immediately eval argument names
+          args = [sym_eval(i, _dynamic_namespace) for i in args]
           logging.debug('macro call: params=%s\nargs=%s\n%s' % (repr(self.parms), repr(args), repr(_dynamic_namespace)))
           call_namespace = SymNamespace(self.parms, args,
             outer = _dynamic_namespace)
@@ -231,11 +231,11 @@ def sym_eval(x, _dynamic_namespace=global_namespace):
         exp = conseq if sym_eval(test, _dynamic_namespace) else alt
         return sym_eval(exp, _dynamic_namespace)
 
-    #elif x[0] == 'macro':
-    #    _, parms, body = x
-    #    logging.debug('macro procedure')
-    #    #return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace)
-    #    return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace, macro=True)
+    elif x[0] == 'macro':
+        _, parms, body = x
+        logging.debug('macro procedure')
+        #return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace)
+        return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace, macro=True)
 
     elif x[0] == 'lambda':
         _, parms, body = x
@@ -292,9 +292,9 @@ def standard_nsp():
         #'*': lambda
         #'/': lambda
 
-        '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
+        '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq,
         'abs':     abs,
-        'append':  op.add,  
+        'append':  op.add,
         #'apply':   apply,
         #'begin':   lambda *x: [sym_eval(i) for i in x][-1],
         #'begin':   begin,
@@ -302,13 +302,14 @@ def standard_nsp():
         # (begin (add 1 2) (sub 3 4))
         # ((add 1 2) (sub 3 4))
         'car':     lambda x: x[0],
-        'cdr':     lambda x: x[1:], 
-        'cons':    lambda x,y, _dynamic_namespace: [x] + y,
-        'eq?':     op.is_, 
-        'equal?':  op.eq, 
-        'length':  len, 
-        'list':    lambda *x: list(x), 
-        'list?':   lambda x: isinstance(x,list), 
+        'cdr':     lambda x: x[1:],
+        'cons':    lambda x, y, _dynamic_namespace: [x] + y,
+        'fjoin':   lambda x, y, _dynamic_namespace: sym_eval(x + [sym_eval(y, _dynamic_namespace=_dynamic_namespace)], _dynamic_namespace=_dynamic_namespace),
+        'eq?':     op.is_,
+        'equal?':  op.eq,
+        'length':  len,
+        'list':    lambda *x, _dynamic_namespace: list(x),
+        'list?':   lambda x: isinstance(x,list),
         #'map':     map,
         'map':     lambda x: map(basic_eval(x[0]), x[1:]),
         #(basic_eval (map basic_eval (foo bar)))
@@ -316,8 +317,8 @@ def standard_nsp():
         'max':     max,
         'min':     min,
         'not':     op.not_,
-        'null?':   lambda x: x == [], 
-        'number?': lambda x: isinstance(x, Number),   
+        'null?':   lambda x: x == [],
+        'number?': lambda x: isinstance(x, Number),
         'procedure?': callable,
         'round':   round,
         'symbol?': lambda x: isinstance(x, Symbol),
@@ -352,15 +353,22 @@ better to use begin
 
 '(sym_define eeval (macro (x) (eval (eval x))))',
 
+tests = [
+'(cons 5 (1 2 3))',
+'(add 3 4)',
+'(fjoin (list) (add 3 4))',
+'(fjoin (cons 5) (fjoin (list) (add 3 4)))',
+]
+
 tests = tests_begin_crash = [
-'(sym_define eeval (lambda (x) (eval (eval x))))',
+'(sym_define eeval (macro (x) (fjoin (eval) (eval x))))',
 '(sym_define ++ (lambda (x y) (begin (sym_define x (eeval x)) (sym_define y (eeval y)) (eval (add x y)))))',
 '(++ 1 2)',
+'(++ (++ 11 28) 2)',
+'(++ (++ 11 28) (mul 1 2))',
 ]
 
 [
-'(++ (++ 11 28) 2)',
-'(++ (++ 11 28) (mul 1 2))',
 ]
 
 tests_more = [
