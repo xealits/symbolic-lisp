@@ -75,8 +75,9 @@ global_namespace = SymNamespace()
 
 class SymbolicProcedure(object):
     "A user-defined procedure."
-    def __init__(self, parms, body, lexical_namespace):
+    def __init__(self, parms, body, lexical_namespace, macro=False):
         self.parms, self.body, self.lexical_namespace = parms, body, lexical_namespace
+        self.macro = macro
         '''
         here lexical_namespace is the lexical environment where this procedure is defined
         body is a list (proc a b c)
@@ -112,7 +113,14 @@ class SymbolicProcedure(object):
         and define with produced env-s...
         '''
 
-        call_namespace = SymNamespace(self.parms, args,
+        if self.macro:
+          # immediately 
+          args = 
+          logging.debug('macro call: params=%s\nargs=%s\n%s' % (repr(self.parms), repr(args), repr(_dynamic_namespace)))
+          call_namespace = SymNamespace(self.parms, args,
+            outer = _dynamic_namespace)
+        else:
+          call_namespace = SymNamespace(self.parms, args,
             outer = self.lexical_namespace,
             dynamic_namespace = _dynamic_namespace)
         return sym_eval(self.body, call_namespace)
@@ -176,6 +184,8 @@ def sym_eval(x, _dynamic_namespace=global_namespace):
     logging.debug('%3d: %s' % (__sym_eval_counter, repr(x)))
     __sym_eval_counter += 1
 
+    if 'x' in _dynamic_namespace: logging.debug('sym_eval _dynamic_namespace["x"] = %s' % _dynamic_namespace['x'])
+
     if isinstance(x, Symbol):
         if _dynamic_namespace.find(x):
             return _dynamic_namespace.find(x)[var_name(x)]
@@ -200,7 +210,7 @@ def sym_eval(x, _dynamic_namespace=global_namespace):
         _, var, exp = x
         var = var if isinstance(var, Symbol) else sym_eval(var, _dynamic_namespace) # dynamic names
         val = sym_eval(exp, _dynamic_namespace)
-        logging.debug('sym_define: %s' % repr(var))
+        logging.debug('sym_define: %s = %s' % (repr(var), repr(val)))
         _dynamic_namespace[var] = val
 
     # the usual eval
@@ -221,9 +231,15 @@ def sym_eval(x, _dynamic_namespace=global_namespace):
         exp = conseq if sym_eval(test, _dynamic_namespace) else alt
         return sym_eval(exp, _dynamic_namespace)
 
+    #elif x[0] == 'macro':
+    #    _, parms, body = x
+    #    logging.debug('macro procedure')
+    #    #return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace)
+    #    return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace, macro=True)
+
     elif x[0] == 'lambda':
         _, parms, body = x
-        logging.debug('labda procedure')
+        logging.debug('lambda procedure')
         return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace)
 
     # couple special lists
@@ -287,7 +303,7 @@ def standard_nsp():
         # ((add 1 2) (sub 3 4))
         'car':     lambda x: x[0],
         'cdr':     lambda x: x[1:], 
-        'cons':    lambda x,y: [x] + y,
+        'cons':    lambda x,y, _dynamic_namespace: [x] + y,
         'eq?':     op.is_, 
         'equal?':  op.eq, 
         'length':  len, 
@@ -334,9 +350,15 @@ how would a usual pre-eval function work?
 better to use begin
 '''
 
+'(sym_define eeval (macro (x) (eval (eval x))))',
+
 tests = tests_begin_crash = [
-'(sym_define ++ (lambda (x y) (begin (sym_define x (eval (eval x))) (sym_define y (eval (eval y))) (eval (add x y)))))',
+'(sym_define eeval (lambda (x) (eval (eval x))))',
+'(sym_define ++ (lambda (x y) (begin (sym_define x (eeval x)) (sym_define y (eeval y)) (eval (add x y)))))',
 '(++ 1 2)',
+]
+
+[
 '(++ (++ 11 28) 2)',
 '(++ (++ 11 28) (mul 1 2))',
 ]
