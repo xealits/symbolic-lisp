@@ -68,7 +68,24 @@ class Env(dict):
         else:
             return self.outer.find(var)
 
+class SymNamespace(dict):
+    "An environment: a dict of {'var':val} pairs, with an outer Env."
+    def __init__(self, parms=(), args=(), outer=None, dynamic_namespace=None):
+        self.update([("_dynamic_namespace", dynamic_namespace)])
+        self.update(zip(parms, args))
+        self.outer = outer
+    def find(self, var):
+        "Find the innermost Env where var appears."
+        # TODO: make a hook for top-most names to embed into shell or python
+        if (var in self):
+            return self
+        elif self.outer is None:
+            return None
+        else:
+            return self.outer.find(var)
+
 global_env = Env()
+global_namespace = SymNamespace()
 ################ Interaction: A REPL
 
 def repl(prompt='lis.py> '):
@@ -84,6 +101,19 @@ def repl(prompt='lis.py> '):
         if val is not None: 
             print(lispstr(val))
 
+def sym_repl(prompt='sym_lis> '):
+    "A prompt-read-eval-print loop."
+    while True:
+        user_inp = raw_input(prompt)
+        if not user_inp:
+            continue
+
+        # run eval on user's program
+        #val = eval(parse(user_inp))
+        val = sym_eval(parse(user_inp))
+        if val is not None: 
+            print(lispstr(val))
+
 def lispstr(exp):
     "Convert a Python object back into a Lisp-readable string."
     if isinstance(exp, List):
@@ -95,15 +125,15 @@ def lispstr(exp):
 
 class SymbolicProcedure(object):
     "A user-defined procedure."
-    def __init__(self, parms, body, env):
-        self.parms, self.body, self.env = parms, body, env
+    def __init__(self, parms, body, lexical_namespace):
+        self.parms, self.body, self.lexical_namespace = parms, body, lexical_namespace
         '''
-        here env is the lexical environment where this procedure is defined
+        here lexical_namespace is the lexical environment where this procedure is defined
         body is a list (proc a b c)
         can be (begin (foo a b c) ...)
         '''
 
-    def __call__(self, callerenv_n_args): 
+    def __call__(self, *args, _dynamic_namespace=None): 
         '''
         body is evaluated in the lexical env extended with defined local parameters
         here I need
@@ -132,10 +162,10 @@ class SymbolicProcedure(object):
         and define with produced env-s...
         '''
 
-        (caller_env, args) = callerenv_n_args
-        # make a function which runs eval at caller_env
-        # and pass it as an additional argument
-        return eval(self.body, Env(self.parms, args, self.env))
+        call_namespace = SymNamespace(self.parms, args,
+            outer = self.lexical_namespace,
+            dynamic_namespace = _dynamic_namespace)
+        return sym_eval(self.body, call_namespace)
 
 class Procedure(object):
     "A user-defined Scheme^WSymbolic procedure."
@@ -150,6 +180,92 @@ class Procedure(object):
 def var_name(var):
     assert isinstance(var, Symbol)
     return var.split('/')[-1]
+
+__sym_eval_counter = 0
+def sym_eval(x, _dynamic_namespace=global_namespace):
+    """sym_eval(x, _dynamic_namespace=global_namespace)
+
+    Parse basic elements:
+    x = string -- treat it as a name, look up the corresponding value in the current _dynamic_namespace
+    x = int    -- return it
+    x = [list] -- sym_eval the first position and call it with the rest
+                  if the first position is int
+                  look for a list in the seocnd argument and return the element from the list
+                  or return the int
+
+    Find a symbol in a _dynamic_namespace or the first symbol of a list."""
+
+    global __sym_eval_counter
+    logging.debug('%3d: %s' % (__sym_eval_counter, repr(x)))
+    __sym_eval_counter += 1
+
+    if isinstance(x, Symbol):
+        if _dynamic_namespace.find(x):
+            return _dynamic_namespace.find(x)[var_name(x)]
+        else:
+            logging.debug('Symbol %s not found' % repr(x))
+            return x
+
+    elif not isinstance(x, List):  # constant literal
+        return x
+
+    # a list
+
+    # elementary lists
+    elif x[0] == 'sym_define':
+        _, var, exp = x
+        var = sym_eval(var, _dynamic_namespace)
+        val = sym_eval(exp, _dynamic_namespace)
+        logging.debug('sym_define: %s' % repr(var))
+        _dynamic_namespace[var] = val
+
+    # the usual eval
+    elif x[0] == 'eval':
+        #assert len(x) > 1 # (eval something)
+        _, expr = x
+        if not isinstance(expr, List):
+            return sym_eval(expr, _dynamic_namespace)
+        else:
+            # pre-eval args
+            args = [sym_eval(i, _dynamic_namespace) for i in expr[1:]]
+            logging.debug('pre-eval-ed args: %s' % repr(args))
+            # and call
+            return sym_eval([expr[0]]+args, _dynamic_namespace)
+
+    elif x[0] == 'if':
+        _, test, conseq, alt = x
+        exp = conseq if sym_eval(test, _dynamic_namespace) else alt
+        return sym_eval(exp, _dynamic_namespace)
+
+    elif x[0] == 'lambda':
+        _, parms, body = x
+        logging.debug('labda procedure')
+        return SymbolicProcedure(parms, body, lexical_namespace=_dynamic_namespace)
+
+    # couple special lists
+    else:
+        logging.debug('calling symbolic first_symbol: %s' % repr(x[0]))
+        first_symbol = sym_eval(x[0], _dynamic_namespace)
+        logging.debug('eval-ed symbolic first_symbol: %s' % repr(first_symbol))
+
+        # elementary options
+        if isinstance(first_symbol, int):
+            rest = x[1:]
+            return rest[first_symbol]
+            # or should I eval it?
+
+        # here I can insert handling 1-element list of name ["name"]
+        # to eval the value instead of doing it by default
+
+        # user procedures
+        elif callable(first_symbol):
+            res = first_symbol(*x[1:], _dynamic_namespace=_dynamic_namespace)
+            logging.debug('res: %s' % repr(res))
+            return res
+
+        else:
+            print("not callable symbol: %s" % repr(first_symbol))
+
 
 def basic_eval(x, env=global_env):
     "Find a symbol in an environment or the first symbol of a list."
@@ -330,7 +446,7 @@ def eval(x, env=global_env):
 
 
 def binary_operator(oper):
-    return lambda (a, b): oper(a, b)
+    return lambda a, b: oper(a, b)
 
 def standard_env():
     "An environment with some Scheme standard procedures."
@@ -352,7 +468,7 @@ def standard_env():
         '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
         'abs':     abs,
         'append':  op.add,  
-        'apply':   apply,
+        #'apply':   apply,
         #'begin':   lambda *x: x[-1],
         # (begin (add 1 2) (sub 3 4))
         # ((add 1 2) (sub 3 4))
@@ -383,9 +499,84 @@ def standard_env():
 
 global_env.update(standard_env())
 
+def sym_binary_operator(oper):
+    def bin_oper(a, b, _dynamic_namespace=None):
+        return oper(a, b)
+    return bin_oper
+
+def begin(*args, _dynamic_namespace):
+    return [sym_eval(i) for i in args][-1]
+
+def standard_nsp():
+    "An environment with some Scheme standard procedures."
+    nsp = SymNamespace()
+    nsp.update(vars(math)) # sin, cos, sqrt, pi, ...
+    nsp.update({
+        #'+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
+        #'add': lambda (a, b): op.add(a, b),
+        'add': sym_binary_operator(op.add),
+        'sub': sym_binary_operator(op.sub),
+        'mul': sym_binary_operator(op.mul),
+        'div': sym_binary_operator(op.truediv),
+
+        #'+': lambda
+        #'-': lambda
+        #'*': lambda
+        #'/': lambda
+
+        '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
+        'abs':     abs,
+        'append':  op.add,  
+        #'apply':   apply,
+        #'begin':   lambda *x: [sym_eval(i) for i in x][-1],
+        'begin':   begin,
+        #'begin':   lambda *x: x[-1],
+        # (begin (add 1 2) (sub 3 4))
+        # ((add 1 2) (sub 3 4))
+        'car':     lambda x: x[0],
+        'cdr':     lambda x: x[1:], 
+        'cons':    lambda x,y: [x] + y,
+        'eq?':     op.is_, 
+        'equal?':  op.eq, 
+        'length':  len, 
+        'list':    lambda *x: list(x), 
+        'list?':   lambda x: isinstance(x,list), 
+        #'map':     map,
+        'map':     lambda x: map(basic_eval(x[0]), x[1:]),
+        #(basic_eval (map basic_eval (foo bar)))
+        #'eval':    lambda x, _dynamic_namespace: sym_eval(list(map(sym_eval, x))),
+        'basic_eval': basic_eval, # not defined
+        'max':     max,
+        'min':     min,
+        'not':     op.not_,
+        'null?':   lambda x: x == [], 
+        'number?': lambda x: isinstance(x, Number),   
+        'procedure?': callable,
+        'round':   round,
+        'symbol?': lambda x: isinstance(x, Symbol),
+        'exit': lambda _: exit(),
+    })
+    return nsp
+
+global_namespace.update(standard_nsp())
+
+
 tests = [
 #'(+ 1 2)',
 '(add 1 2)',
+'(add foobar _bazzzz)',
+'(add (add 1 2) (add 3 4))',
+'(sym_define + (lambda (x y) (eval (add (eval (eval x)) (eval (eval y))))))',
+'(+ 1 2)',
+'(+ (+ 11 28) 2)',
+'(+ (+ 11 28) (mul 1 2))',
+'(sym_define +2 (lambda (x y) (begin (sym_define x (eval x)) (sym_define y (eval y)) (eval (add x y)))))',
+'(+2 1 2)',
+'(+2 (+2 11 28) 2)',
+'(+2 (+2 11 28) (mul 1 2))',
+]
+
+tests_more = [
 '(define + (lambda (x y) (eval (add (eval (eval x)) (eval (eval y))))))',
 '(+ 1 2)',
 '(+ (+ 11 28) 2)',
@@ -407,9 +598,9 @@ tests = [
 #       because it calls things in the lexical scope of `add`, not in `+`!!!
 
 
-def test():
+def test(eval_proc=basic_eval):
     for t in tests:
-        val = basic_eval(parse(t))
+        val = eval_proc(parse(t))
         if val is not None: 
             print(lispstr(val))
 
@@ -421,6 +612,7 @@ if __name__ == '__main__':
         )
 
     parser.add_argument("--debug",  action='store_true', help="DEBUG level of logging")
+    parser.add_argument("--test",   action='store_true', help="just run tests")
 
     args = parser.parse_args()
 
@@ -429,6 +621,9 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
 
-    test()
-    repl()
+    if args.test:
+        test(sym_eval)
+    else:
+        #repl()
+        sym_repl()
 
