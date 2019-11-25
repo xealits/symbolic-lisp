@@ -187,11 +187,18 @@ def sym_eval(x, _dynamic_namespace=global_namespace):
         return x
 
     # a list
+    elif x[0] == 'quote':          # (quote exp)
+        #_, exp = x
+        #return exp
+        return x[1:]
+
+    elif x[0] == 'begin':
+        return [sym_eval(i, _dynamic_namespace) for i in x[1:]][-1]
 
     # elementary lists
     elif x[0] == 'sym_define':
         _, var, exp = x
-        var = sym_eval(var, _dynamic_namespace)
+        var = var if isinstance(var, Symbol) else sym_eval(var, _dynamic_namespace) # dynamic names
         val = sym_eval(exp, _dynamic_namespace)
         logging.debug('sym_define: %s' % repr(var))
         _dynamic_namespace[var] = val
@@ -249,8 +256,8 @@ def sym_binary_operator(oper):
         return oper(a, b)
     return bin_oper
 
-def begin(*args, _dynamic_namespace):
-    return [sym_eval(i) for i in args][-1]
+#def begin(*args, _dynamic_namespace):
+#    return [sym_eval(i) for i in args][-1]
 
 def standard_nsp():
     "An environment with some Scheme standard procedures."
@@ -274,7 +281,7 @@ def standard_nsp():
         'append':  op.add,  
         #'apply':   apply,
         #'begin':   lambda *x: [sym_eval(i) for i in x][-1],
-        'begin':   begin,
+        #'begin':   begin,
         #'begin':   lambda *x: x[-1],
         # (begin (add 1 2) (sub 3 4))
         # ((add 1 2) (sub 3 4))
@@ -305,7 +312,7 @@ def standard_nsp():
 global_namespace.update(standard_nsp())
 
 
-tests = [
+passed_tests = [
 #'(+ 1 2)',
 '(add 1 2)',
 '(add foobar _bazzzz)',
@@ -314,10 +321,24 @@ tests = [
 '(+ 1 2)',
 '(+ (+ 11 28) 2)',
 '(+ (+ 11 28) (mul 1 2))',
-'(sym_define +2 (lambda (x y) (begin (sym_define x (eval x)) (sym_define y (eval y)) (eval (add x y)))))',
-'(+2 1 2)',
-'(+2 (+2 11 28) 2)',
-'(+2 (+2 11 28) (mul 1 2))',
+]
+
+'''
+how would a usual pre-eval function work?
+
+(func (params) (body))
+->
+(lambda (params) (eval (body with (eval (eval param)))))
+
+-- not trivial parsing
+better to use begin
+'''
+
+tests = tests_begin_crash = [
+'(sym_define ++ (lambda (x y) (begin (sym_define x (eval (eval x))) (sym_define y (eval (eval y))) (eval (add x y)))))',
+'(++ 1 2)',
+'(++ (++ 11 28) 2)',
+'(++ (++ 11 28) (mul 1 2))',
 ]
 
 tests_more = [
