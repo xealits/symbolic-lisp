@@ -124,6 +124,9 @@ class Procedure(object):
 def eval(x, env=global_env):
     "Evaluate an expression in an environment."
     if isinstance(x, Symbol):      # variable reference
+        # quote symbols
+        if len(x) > 1 and x[0] == "'":
+            return x[1:]
         return env.find(x)[x]
     elif not isinstance(x, List):  # constant literal
         return x                
@@ -152,7 +155,7 @@ def eval(x, env=global_env):
         return proc(*args)
 
 
-tests = passed_tests = [
+passed_tests = [
 '(+ 1 2)',
 '(+ (+ 11 28) 2)',
 '(+ (+ 11 28) (* 1 2))',
@@ -161,6 +164,14 @@ tests = passed_tests = [
 '(foo 4 2)',
 '(+ (quote foo) (quote _bar))',
 '(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))',
+'(foo_bar 4 2)',
+]
+
+tests = [
+'(define foo (lambda (x y) (+ 2 (+ x y))))',
+"foo",
+"'foo",
+"(define (+ 'foo '_bar) (lambda (x y) (+ 2 (+ x y))))",
 '(foo_bar 4 2)',
 ]
 
