@@ -6,6 +6,7 @@ from __future__ import division
 import math
 import operator as op
 
+from sys import stdout
 import argparse
 import logging
 import pdb
@@ -14,7 +15,8 @@ import pdb
 
 Symbol = str          # A Lisp Symbol is implemented as a Python str
 List   = list         # A Lisp List is implemented as a Python list
-Number = (int, float) # A Lisp Number is implemented as a Python int or float
+#Number = (int, float) # A Lisp Number is implemented as a Python int or float
+#Namespace = dict   # TODO: actually it must be an Env
 
 ################ Parsing: parse, tokenize, and read_from_tokens
 
@@ -76,7 +78,10 @@ def standard_env():
         'min':     min,
         'not':     op.not_,
         'null?':   lambda x: x == [], 
-        'number?': lambda x: isinstance(x, Number),   
+        'int?':    lambda x: isinstance(x, int),
+        'float?':  lambda x: isinstance(x, float),
+        'number?': lambda x: isinstance(x, (int, float)),
+        'env?' :   lambda x: isinstance(x, Env),
         'procedure?': callable,
         'round':   round,
         'symbol?': lambda x: isinstance(x, Symbol),
@@ -91,6 +96,8 @@ class Env(dict):
     def find(self, var):
         "Find the innermost Env where var appears."
         return self if (var in self) else self.outer.find(var)
+    def __call__(self, key):
+        return self[key] # TODO: now it is only the current namespace, expand?
 
 global_env = standard_env()
 
@@ -128,8 +135,23 @@ def eval(x, env=global_env):
         if len(x) > 1 and x[0] == "'":
             return x[1:]
         return env.find(x)[x]
+
     elif not isinstance(x, List):  # constant literal
         return x                
+
+    elif isinstance(x[0], int):       # convenience
+        return x[x[0]]
+
+    elif isinstance(x[0], Env):
+        nsp, key = x
+        return nsp[key]
+
+    elif x[0] == 'env':
+        nsp = Env()
+        args = [eval(exp, env) for exp in x[1:]]
+        nsp.update(args)
+        return nsp
+
     elif x[0] == 'quote':          # (quote exp)
         (_, exp) = x
         return exp
@@ -167,7 +189,7 @@ passed_tests = [
 '(foo_bar 4 2)',
 ]
 
-tests = [
+test_string_quote = [
 '(define foo (lambda (x y) (+ 2 (+ x y))))',
 "foo",
 "'foo",
@@ -175,13 +197,27 @@ tests = [
 '(foo_bar 4 2)',
 ]
 
+tests_iterations = [
+"(1 'foo 'bar 77)",
+"(3 'foo 'bar 77)",
+"(5 'foo 'bar 77)",
+]
+
+tests = tests_namespaces = [
+"(quote (env (quote 'foo 5) (quote 3 7)))",
+"(env (quote ('foo 5)) (quote (3 7)))",
+"(env? (env (quote ('foo 5)) (quote (3 7))))",
+"((env (quote ('foo 5)) (quote (3 7))) 3)",
+]
+
 def test(eval_proc=eval):
     for t in tests:
+        stdout.write("%40s " % t)
         val = eval_proc(parse(t))
         if val is not None: 
-            print("%40s = %s" % (t, lispstr(val)))
+            print("= %s" % lispstr(val))
         else:
-            print("%40s   None" % t)
+            print("  None")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
