@@ -6,7 +6,8 @@ from __future__ import division
 import math
 import operator as op
 
-from sys import stdout
+import re
+from sys import stdout, exit
 import argparse
 import logging
 import pdb
@@ -16,7 +17,6 @@ import pdb
 Symbol = str          # A Lisp Symbol is implemented as a Python str
 List   = list         # A Lisp List is implemented as a Python list
 #Number = (int, float) # A Lisp Number is implemented as a Python int or float
-#Namespace = dict   # TODO: actually it must be an Env
 
 ################ Parsing: parse, tokenize, and read_from_tokens
 
@@ -85,17 +85,79 @@ def standard_env():
         'procedure?': callable,
         'round':   round,
         'symbol?': lambda x: isinstance(x, Symbol),
+        'exit':    exit,
     })
     return env
+
+re_repetitions = re.compile(r"(/)\1{1,}", re.DOTALL)
+def no_repeated_slashes(string):
+    return re_repetitions.sub(r"\1", string)
+
+def standard_name_path_list(name_path):
+    name_path = no_repeated_slashes(name_path)
+    if name_path[-1] == '/':
+        name_path = name_path[:-1]
+    return name_path.split('/')
 
 class Env(dict):
     "An environment: a dict of {'var':val} pairs, with an outer Env."
     def __init__(self, parms=(), args=(), outer=None):
         self.update(zip(parms, args))
         self.outer = outer
-    def find(self, var):
-        "Find the innermost Env where var appears."
-        return self if (var in self) else self.outer.find(var)
+
+    def bubble_find(self, var):
+        "Find the outermost Env where var appears."
+        return self if (var in self) else self.outer.bubble_find(var)
+
+    def find(self, name_path):
+        """Find the outermost Env where name_path appears and return the variable from the name_path."""
+
+        #name_path = standard_name_path_list(name_path)
+        # if the name path is empty
+        if not name_path: return self
+
+        # bubble the root part of the name up to the outermost
+        start_name = name_path[0]
+
+        if   start_name == '':
+            start_env = global_env
+        elif start_name == '.':
+            start_env = self
+        elif start_name == '..':
+            start_env = self.outer
+        else:
+            #return self if (var in self) else self.outer.bubble_find(var)
+            start_env = self.bubble_find(start_name)[start_name] # it must be another env
+            assert isinstance(start_env, Env)
+
+        # nest down the name path
+        for name in name_path[1:]:
+            if   name == '.':
+                continue
+            elif name == '..':
+                start_env = start_env.outer
+            else:
+                start_env = start_env[name]
+
+        # the final environment
+        return start_env
+
+    def nest(self, name_path):
+        """Nest env-s from the current env or its outer. 
+        """
+
+        name_path = standard_name_path_list(name_path)
+        start_name = name_path[0]
+
+        # the starting env, no bubbling up to the outermost
+        if   start_name == '':
+            start_env = global_env
+        elif start_name == '.':
+            start_env = self
+        elif start_name == '..':
+            start_env = self.outer
+
+
     def __call__(self, key):
         return self[key] # TODO: now it is only the current namespace, expand?
 
@@ -106,7 +168,7 @@ global_env = standard_env()
 def repl(prompt='lis.py> '):
     "A prompt-read-eval-print loop."
     while True:
-        val = eval(parse(raw_input(prompt)))
+        val = eval(parse(input(prompt)))
         if val is not None: 
             print(lispstr(val))
 
@@ -124,7 +186,7 @@ class Procedure(object):
     def __init__(self, parms, body, env):
         self.parms, self.body, self.env = parms, body, env
     def __call__(self, *args): 
-        return eval(self.body, Env(self.parms, args, self.env))
+        return eval(self.body, Env(self.parms, args, outer=self.env))
 
 ################ eval
 
@@ -134,20 +196,37 @@ def eval(x, env=global_env):
         # quote symbols
         if len(x) > 1 and x[0] == "'":
             return x[1:]
-        return env.find(x)[x]
+
+        # else it is a name path
+        name_path = standard_name_path_list(x)
+        var_name = name_path[-1]
+        path     = name_path[:-1]
+        return env.find(path)[var_name]
 
     elif not isinstance(x, List):  # constant literal
         return x                
+
+    # in the rest x is List
+
+    # same as look-up but with set at the end
+    elif x[0] == 'set!':           # (set! var exp)
+        (_, var, exp) = x
+
+        name_path = standard_name_path_list(name_path)
+        var_name = name_path[-1]
+        path     = name_path[:-1]
+        env.find(path)[var_name] = eval(exp, env)
 
     elif isinstance(x[0], int):       # convenience
         return x[x[0]]
 
     elif isinstance(x[0], Env):
         nsp, key = x
-        return nsp[key]
+        return nsp[key] # TODO: get absolute or relative name!
 
     elif x[0] == 'env':
-        nsp = Env()
+        #nsp = Env(outer=env)
+        nsp = Env() # TODO: it is a completely anonymous env now, should it be like that or should it attach in the lexical structure?
         args = [eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
@@ -159,15 +238,30 @@ def eval(x, env=global_env):
         (_, test, conseq, alt) = x
         exp = (conseq if eval(test, env) else alt)
         return eval(exp, env)
+
     elif x[0] == 'define':         # (define var exp)
-        (_, var, exp) = x
+        (_, name_path, exp) = x
+
         # dynamic names in define
-        if isinstance(var, List):
-            var = eval(var, env)
-        env[var] = eval(exp, env)
-    elif x[0] == 'set!':           # (set! var exp)
-        (_, var, exp) = x
-        env.find(var)[var] = eval(exp, env)
+        if isinstance(name_path, List):
+            name_path = eval(name_path, env)
+
+        name_path = standard_name_path_list(name_path)
+        var_name = name_path[-1]
+        path     = name_path[:-1]
+
+        # nest down the path
+        for name in path:
+            if name in env:
+                assert isinstance(env[name], Env)
+                env = env[name]
+            else:
+                new_env = Env(outer=env)
+                env[name] = new_env
+                env = new_env
+
+        env[var_name] = eval(exp, env) # TODO: define at an absolute or relative name!
+
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
         return Procedure(parms, body, env)
@@ -203,12 +297,31 @@ tests_iterations = [
 "(5 'foo 'bar 77)",
 ]
 
-tests = tests_namespaces = [
+tests_namespaces = [
 "(quote (env (quote 'foo 5) (quote 3 7)))",
 "(env (quote ('foo 5)) (quote (3 7)))",
 "(env? (env (quote ('foo 5)) (quote (3 7))))",
 "((env (quote ('foo 5)) (quote (3 7))) 3)",
 ]
+
+tests = tests_namespaces_nested = [
+"(env (quote ('foo 5)) (quote (3 7)))",
+"(define foo (env (quote ('foo 5)) (quote (3 7))))",
+"foo",
+"/foo",
+"/./foo",
+"./foo",
+"././foo",
+"(define foo/bar/baz 55)",
+"foo",
+"(foo 'bar)",
+"foo/bar",
+"foo/bar/",
+"((foo 'bar) 'baz)",
+"foo/bar/baz",
+"(+ foo/bar/baz 33)",
+]
+
 
 def test(eval_proc=eval):
     for t in tests:
