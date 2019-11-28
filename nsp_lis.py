@@ -86,6 +86,7 @@ def standard_env():
         'round':   round,
         'symbol?': lambda x: isinstance(x, Symbol),
         'exit':    exit,
+        'None':    lambda : None,
     })
     return env
 
@@ -94,6 +95,11 @@ def no_repeated_slashes(string):
     return re_repetitions.sub(r"\1", string)
 
 def standard_name_path_list(name_path):
+    # a literal
+    if not isinstance(name_path, Symbol):
+        return name_path
+
+    # a variable name
     name_path = no_repeated_slashes(name_path)
     if name_path[-1] == '/':
         name_path = name_path[:-1]
@@ -127,11 +133,11 @@ class Env(dict):
             start_env = self.outer
         else:
             #return self if (var in self) else self.outer.bubble_find(var)
-            start_env = self.bubble_find(start_name)[start_name] # it must be another env
+            start_env = self.bubble_find(start_name) #[start_name] # it must be another env
             assert isinstance(start_env, Env)
 
         # nest down the name path
-        for name in name_path[1:]:
+        for name in name_path[:-1]:
             if   name == '.':
                 continue
             elif name == '..':
@@ -140,7 +146,7 @@ class Env(dict):
                 start_env = start_env[name]
 
         # the final environment
-        return start_env
+        return start_env if name_path[-1] in start_env else None
 
     def nest(self, name_path):
         """Nest env-s from the current env or its outer. 
@@ -157,9 +163,15 @@ class Env(dict):
         elif start_name == '..':
             start_env = self.outer
 
-
     def __call__(self, key):
-        return self[key] # TODO: now it is only the current namespace, expand?
+        #return self[key] # TODO: now it is only the current namespace, expand?
+        if not isinstance(key, Symbol):
+            return self[key]
+
+        name_path = standard_name_path_list(key)
+        var_name = name_path[-1]
+        path     = name_path
+        return self.find(path)[key]
 
 global_env = standard_env()
 
@@ -200,10 +212,10 @@ def eval(x, env=global_env):
         # else it is a name path
         name_path = standard_name_path_list(x)
         var_name = name_path[-1]
-        path     = name_path[:-1]
+        path     = name_path #[:-1]
         return env.find(path)[var_name]
 
-    elif not isinstance(x, List):  # constant literal
+    elif not isinstance(x, List):  # constant literal, like None
         return x                
 
     # in the rest x is List
@@ -214,7 +226,7 @@ def eval(x, env=global_env):
 
         name_path = standard_name_path_list(name_path)
         var_name = name_path[-1]
-        path     = name_path[:-1]
+        path     = name_path #[:-1]
         env.find(path)[var_name] = eval(exp, env)
 
     elif isinstance(x[0], int):       # convenience
@@ -222,11 +234,22 @@ def eval(x, env=global_env):
 
     elif isinstance(x[0], Env):
         nsp, key = x
-        return nsp[key] # TODO: get absolute or relative name!
+        #return nsp[key] # TODO: get absolute or relative name!
+        name_path = standard_name_path_list(key)
+        var_name = name_path[-1]
+        path     = name_path
+        return nsp.find(path)[var_name]
 
     elif x[0] == 'env':
         #nsp = Env(outer=env)
         nsp = Env() # TODO: it is a completely anonymous env now, should it be like that or should it attach in the lexical structure?
+        args = [eval(exp, env) for exp in x[1:]]
+        nsp.update(args)
+        return nsp
+
+    elif x[0] == 'env_attached':
+        nsp = Env(outer=env)
+        #nsp = Env() # TODO: it is a completely anonymous env now, should it be like that or should it attach in the lexical structure?
         args = [eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
@@ -252,7 +275,9 @@ def eval(x, env=global_env):
 
         # nest down the path
         for name in path:
-            if name in env:
+            if   name == '':
+                env = global_env
+            elif name in env:
                 assert isinstance(env[name], Env)
                 env = env[name]
             else:
@@ -304,7 +329,7 @@ tests_namespaces = [
 "((env (quote ('foo 5)) (quote (3 7))) 3)",
 ]
 
-tests = tests_namespaces_nested = [
+tests_namespaces_nested = [
 "(env (quote ('foo 5)) (quote (3 7)))",
 "(define foo (env (quote ('foo 5)) (quote (3 7))))",
 "foo",
@@ -320,6 +345,23 @@ tests = tests_namespaces_nested = [
 "((foo 'bar) 'baz)",
 "foo/bar/baz",
 "(+ foo/bar/baz 33)",
+]
+
+tests = tests_namespaces_attached = [
+"None",
+"(None)",
+"(define foo (env (quote ('foo 5)) (quote (3 7))))",
+"(define bar (env_attached (quote ('foo 5)) (quote (3 7))))",
+"(define bar/baz (env_attached (quote ('foo 5)) (quote (3 7))))",
+"(define globalvar 55)",
+"foo",
+"bar",
+"(foo 3)",
+"(bar 3)",
+"(bar 'globalvar)",
+"(bar 'baz)",
+"((bar 'baz) 'globalvar)",
+"(foo 'globalvar)",
 ]
 
 
