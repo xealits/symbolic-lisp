@@ -87,6 +87,9 @@ def standard_env():
         'symbol?': lambda x: isinstance(x, Symbol),
         'exit':    exit,
         'None':    lambda : None,
+        'in?':     lambda nsp, y: y in nsp,
+        'get':     lambda nsp, x: nsp(x),
+        'get_default':     lambda nsp, x, d: nsp(x, default=d),
     })
     return env
 
@@ -113,7 +116,7 @@ class Env(dict):
 
     def bubble_find(self, var):
         "Find the outermost Env where var appears."
-        return self if (var in self) else self.outer.bubble_find(var)
+        return self if (var in self) else (self.outer.bubble_find(var) if self.outer is not None else None)
 
     def find(self, name_path):
         """Find the outermost Env where name_path appears and return the variable from the name_path."""
@@ -163,7 +166,7 @@ class Env(dict):
         elif start_name == '..':
             start_env = self.outer
 
-    def __call__(self, key):
+    def __call__(self, key, default=None):
         #return self[key] # TODO: now it is only the current namespace, expand?
         if not isinstance(key, Symbol):
             return self[key]
@@ -171,7 +174,7 @@ class Env(dict):
         name_path = standard_name_path_list(key)
         var_name = name_path[-1]
         path     = name_path
-        return self.find(path)[key]
+        return self.find(path)[key] if key in self.find(path) else default
 
 global_env = standard_env()
 
@@ -350,7 +353,8 @@ tests_namespaces_nested = [
 tests = tests_namespaces_attached = [
 "None",
 "(None)",
-"(define foo (env (quote ('foo 5)) (quote (3 7))))",
+"(define foo  (env (quote ('foo 5)) (quote (3 7))))",
+"(define foo2 (env (quote  (foo 5)) (quote (3 7))))",
 "(define bar (env_attached (quote ('foo 5)) (quote (3 7))))",
 "(define bar/baz (env_attached (quote ('foo 5)) (quote (3 7))))",
 "(define globalvar 55)",
@@ -361,6 +365,14 @@ tests = tests_namespaces_attached = [
 "(bar 'globalvar)",
 "(bar 'baz)",
 "((bar 'baz) 'globalvar)",
+"(in? (quote (3 7)) 3)",
+"(in? (quote (4 7)) 3)",
+"(in? foo  3)",
+"(in? foo  'foo)",
+"(in? foo2 'foo)",
+"(get_default foo 'globalvar 1)",
+"(get foo 'globalvar)",
+"(get foo 3)",
 "(foo 'globalvar)",
 ]
 
