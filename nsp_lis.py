@@ -165,21 +165,6 @@ class Env(dict):
         return start_env if name_path[-1] in start_env else None # return None if no such name is defined
         #return start_env[name_path[-1]] # or crash
 
-    #def nest(self, name_path):
-    #    """Nest env-s from the current env or its outer. 
-    #    """
-
-    #    name_path = standard_name_path_list(name_path)
-    #    start_name = name_path[0]
-
-    #    # the starting env, no bubbling up to the outermost
-    #    if   start_name == '':
-    #        start_env = global_env
-    #    elif start_name == '.':
-    #        start_env = self
-    #    elif start_name == '..':
-    #        start_env = self.outer
-
     def __call__(self, key, default=None):
         #return self[key] # TODO: now it is only the current namespace, expand?
         if not isinstance(key, Symbol):
