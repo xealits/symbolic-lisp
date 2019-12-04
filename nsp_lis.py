@@ -6,11 +6,14 @@ from __future__ import division
 import math
 import operator as op
 
+from collections import OrderedDict
+
 import re
 from sys import stdout, exit
 import argparse
 import logging
 import pdb
+import traceback
 
 ################ Types
 
@@ -299,7 +302,43 @@ def eval(x, env=global_env):
         return proc(*args)
 
 
-passed_tests = [
+all_test_sessions = OrderedDict()
+last_test_session_id = 0
+
+def add_tests(command_session, name=None):
+    global last_test_session_id
+    if name is None:
+        all_test_sessions[last_test_session_id] = command_session
+    elif name in all_test_sessions:
+        new_name = name + '_%d' % last_test_session_id
+        print('a test session %s already exists, adding this under the name %s' % (name, new_name))
+        all_test_sessions[new_name] = command_session
+    else:
+        all_test_sessions[name] = command_session
+    last_test_session_id += 1
+
+def test(tests, eval_proc=eval):
+    for t in tests:
+        stdout.write("%40s " % t)
+        val = eval_proc(parse(t))
+        if val is not None: 
+            print("= %s" % lispstr(val))
+        else:
+            print("  None")
+
+def run_a_test_session(command_session):
+    print('running the test session')
+    try:
+        #
+        test(command_session)
+        print('SUCCESS!\n')
+    except:
+        #
+        traceback.print_exc()
+        print('ERROR!\n')
+
+
+add_tests([
 '(+ 1 2)',
 '(+ (+ 11 28) 2)',
 '(+ (+ 11 28) (* 1 2))',
@@ -309,30 +348,30 @@ passed_tests = [
 '(+ (quote foo) (quote _bar))',
 '(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))',
 '(foo_bar 4 2)',
-]
+], name='passed_tests')
 
-test_string_quote = [
+add_tests([
 '(define foo (lambda (x y) (+ 2 (+ x y))))',
 "foo",
 "'foo",
 "(define (+ 'foo '_bar) (lambda (x y) (+ 2 (+ x y))))",
 '(foo_bar 4 2)',
-]
+], 'test_string_quote')
 
-tests_iterations = [
+add_tests([
 "(1 'foo 'bar 77)",
 "(3 'foo 'bar 77)",
 "(5 'foo 'bar 77)",
-]
+], 'tests_iterations')
 
-tests_namespaces = [
+add_tests([
 "(quote (env (quote 'foo 5) (quote 3 7)))",
 "(env (quote ('foo 5)) (quote (3 7)))",
 "(env? (env (quote ('foo 5)) (quote (3 7))))",
 "((env (quote ('foo 5)) (quote (3 7))) 3)",
-]
+], 'tests_namespaces')
 
-tests_namespaces_nested = [
+add_tests([
 "(env (quote ('foo 5)) (quote (3 7)))",
 "(define foo (env (quote ('foo 5)) (quote (3 7))))",
 "foo",
@@ -348,9 +387,9 @@ tests_namespaces_nested = [
 "((foo 'bar) 'baz)",
 "foo/bar/baz",
 "(+ foo/bar/baz 33)",
-]
+], 'tests_namespaces_nested')
 
-tests = tests_namespaces_attached = [
+add_tests([
 "None",
 "(None)",
 "(define foo  (env (quote ('foo 5)) (quote (3 7))))",
@@ -374,17 +413,8 @@ tests = tests_namespaces_attached = [
 "(get foo 'globalvar)",
 "(get foo 3)",
 "(foo 'globalvar)",
-]
+], 'tests_namespaces_attached')
 
-
-def test(eval_proc=eval):
-    for t in tests:
-        stdout.write("%40s " % t)
-        val = eval_proc(parse(t))
-        if val is not None: 
-            print("= %s" % lispstr(val))
-        else:
-            print("  None")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -394,7 +424,7 @@ if __name__ == '__main__':
         )
 
     parser.add_argument("--debug",  action='store_true', help="DEBUG level of logging")
-    parser.add_argument("--test",   action='store_true', help="just run tests")
+    parser.add_argument('--test',   nargs='?', const='last', type=str, help="just run tests, 'last' is default, 'all' for all tests")
 
     args = parser.parse_args()
 
@@ -403,9 +433,31 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
 
-    if args.test:
-        test()
-    else:
+    if not args.test:
         repl()
         #sym_repl()
+
+    else:
+        assert all_test_sessions
+
+    if args.test == 'last':
+        name, last_session = all_test_sessions.popitem() 
+        print('testing', name)
+        run_a_test_session(last_session)
+
+    elif args.test.isnumeric():
+        for i in range(int(args.test)):
+            all_test_sessions.popitem()
+        name, last_session = all_test_sessions.popitem() 
+        print('testing', name)
+        run_a_test_session(last_session)
+
+    elif args.test == 'all':
+        for name, session in all_test_sessions.items():
+            print('testing', name)
+            run_a_test_session(session)
+
+    else:
+        print('unknown test suite', args.test)
+        exit(50)
 
