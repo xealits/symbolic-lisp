@@ -119,10 +119,16 @@ class Env(dict):
 
     def bubble_find(self, var):
         "Find the outermost Env where var appears."
-        return self if (var in self) else (self.outer.bubble_find(var) if self.outer is not None else None)
+        if var in self:
+            return self
+        elif self.outer:
+            return self.outer.bubble_find(var)
+        else:
+            return None
 
     def find(self, name_path):
-        """Find the outermost Env where name_path appears and return the variable from the name_path."""
+        """Find the outermost Env where name_path appears and return the variable from the name_path.
+        Return None if not found."""
 
         #name_path = standard_name_path_list(name_path)
         # if the name path is empty
@@ -133,6 +139,8 @@ class Env(dict):
 
         if   start_name == '':
             start_env = global_env
+            # and remove the root name
+            name_path = name_path[1:]
         elif start_name == '.':
             start_env = self
         elif start_name == '..':
@@ -140,6 +148,8 @@ class Env(dict):
         else:
             #return self if (var in self) else self.outer.bubble_find(var)
             start_env = self.bubble_find(start_name) #[start_name] # it must be another env
+            # the path is not found
+            if start_env is None: return None
             assert isinstance(start_env, Env)
 
         # nest down the name path
@@ -152,32 +162,40 @@ class Env(dict):
                 start_env = start_env[name]
 
         # the final environment
-        return start_env if name_path[-1] in start_env else None
+        return start_env if name_path[-1] in start_env else None # return None if no such name is defined
+        #return start_env[name_path[-1]] # or crash
 
-    def nest(self, name_path):
-        """Nest env-s from the current env or its outer. 
-        """
+    #def nest(self, name_path):
+    #    """Nest env-s from the current env or its outer. 
+    #    """
 
-        name_path = standard_name_path_list(name_path)
-        start_name = name_path[0]
+    #    name_path = standard_name_path_list(name_path)
+    #    start_name = name_path[0]
 
-        # the starting env, no bubbling up to the outermost
-        if   start_name == '':
-            start_env = global_env
-        elif start_name == '.':
-            start_env = self
-        elif start_name == '..':
-            start_env = self.outer
+    #    # the starting env, no bubbling up to the outermost
+    #    if   start_name == '':
+    #        start_env = global_env
+    #    elif start_name == '.':
+    #        start_env = self
+    #    elif start_name == '..':
+    #        start_env = self.outer
 
     def __call__(self, key, default=None):
         #return self[key] # TODO: now it is only the current namespace, expand?
         if not isinstance(key, Symbol):
-            return self[key]
+            return self.get(key, default)
 
         name_path = standard_name_path_list(key)
         var_name = name_path[-1]
         path     = name_path
-        return self.find(path)[key] if key in self.find(path) else default
+        located_var = self.find(path)
+
+        # not found variable
+        if located_var is None:
+            return default
+
+        #return self.find(path)[key] if key in self.find(path) else default
+        return self.find(path)[key]
 
 global_env = standard_env()
 
@@ -220,6 +238,7 @@ def eval(x, env=global_env):
         var_name = name_path[-1]
         path     = name_path #[:-1]
         return env.find(path)[var_name]
+        #return env.find(var_name)
 
     elif not isinstance(x, List):  # constant literal, like None
         return x                
@@ -382,6 +401,7 @@ add_tests([
 "(define foo/bar/baz 55)",
 "foo",
 "(foo 'bar)",
+"(foo 'brr 51)",
 "foo/bar",
 "foo/bar/",
 "((foo 'bar) 'baz)",
@@ -409,9 +429,9 @@ add_tests([
 "(in? foo  3)",
 "(in? foo  'foo)",
 "(in? foo2 'foo)",
-"(get_default foo 'globalvar 1)",
-"(get foo 'globalvar)",
-"(get foo 3)",
+"(foo 'globalvar 1)",
+"(foo 'globalvar)",
+"(foo 333)",
 "(foo 'globalvar)",
 ], 'tests_namespaces_attached')
 
