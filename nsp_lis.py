@@ -236,9 +236,8 @@ def eval(x, env=global_env):
         # else it is a name path
         name_path = standard_name_path_list(x)
         var_name = name_path[-1]
-        path     = name_path #[:-1]
+        path     = name_path
         return env.find(path)[var_name]
-        #return env.find(var_name)
 
     elif not isinstance(x, List):  # constant literal, like None
         return x                
@@ -251,7 +250,7 @@ def eval(x, env=global_env):
 
         name_path = standard_name_path_list(name_path)
         var_name = name_path[-1]
-        path     = name_path #[:-1]
+        path     = name_path
         env.find(path)[var_name] = eval(exp, env)
 
     elif isinstance(x[0], int):       # convenience
@@ -274,7 +273,6 @@ def eval(x, env=global_env):
 
     elif x[0] == 'env_attached':
         nsp = Env(outer=env)
-        #nsp = Env() # TODO: it is a completely anonymous env now, should it be like that or should it attach in the lexical structure?
         args = [eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
@@ -310,7 +308,7 @@ def eval(x, env=global_env):
                 env[name] = new_env
                 env = new_env
 
-        env[var_name] = eval(exp, env) # TODO: define at an absolute or relative name!
+        env[var_name] = eval(exp, env)
 
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
@@ -324,37 +322,39 @@ def eval(x, env=global_env):
 all_test_sessions = OrderedDict()
 last_test_session_id = 0
 
-def add_tests(command_session, name=None):
+def add_tests(command_session, name=None, good_result='SUCCESS!'):
     global last_test_session_id
+
+    test_and_result = command_session, good_result
+
     if name is None:
-        all_test_sessions[last_test_session_id] = command_session
+        all_test_sessions[last_test_session_id] = test_and_result
     elif name in all_test_sessions:
         new_name = name + '_%d' % last_test_session_id
         print('a test session %s already exists, adding this under the name %s' % (name, new_name))
-        all_test_sessions[new_name] = command_session
+        all_test_sessions[new_name] = test_and_result
     else:
-        all_test_sessions[name] = command_session
+        all_test_sessions[name] = test_and_result
     last_test_session_id += 1
 
-def test(tests, eval_proc=eval):
-    for t in tests:
-        stdout.write("%40s " % t)
-        val = eval_proc(parse(t))
-        if val is not None: 
-            print("= %s" % lispstr(val))
-        else:
-            print("  None")
-
-def run_a_test_session(command_session):
+def run_a_test_session(command_session, eval_proc=eval):
     print('running the test session')
     try:
         #
-        test(command_session)
-        print('SUCCESS!\n')
+        #test(command_session)
+        for t in command_session:
+            stdout.write("%40s " % t)
+            val = eval_proc(parse(t))
+            if val is not None: 
+                print("= %s" % lispstr(val))
+            else:
+                print("  None")
+
+        return 'SUCCESS!'
     except:
         #
         traceback.print_exc()
-        print('ERROR!\n')
+        return 'ERROR!'
 
 
 add_tests([
@@ -381,7 +381,7 @@ add_tests([
 "(1 'foo 'bar 77)",
 "(3 'foo 'bar 77)",
 "(5 'foo 'bar 77)",
-], 'tests_iterations')
+], 'tests_iterations', 'ERROR!')
 
 add_tests([
 "(quote (env (quote 'foo 5) (quote 3 7)))",
@@ -461,21 +461,29 @@ if __name__ == '__main__':
         assert all_test_sessions
 
     if args.test == 'last':
-        name, last_session = all_test_sessions.popitem() 
+        name, (last_session, target_result) = all_test_sessions.popitem() 
         print('testing', name)
-        run_a_test_session(last_session)
+        result = run_a_test_session(last_session)
+        print(result == target_result, result)
 
     elif args.test.isnumeric():
         for i in range(int(args.test)):
             all_test_sessions.popitem()
-        name, last_session = all_test_sessions.popitem() 
+        name, (last_session, target_result) = all_test_sessions.popitem() 
         print('testing', name)
-        run_a_test_session(last_session)
+        result = run_a_test_session(last_session)
+        print(result == target_result, result)
 
     elif args.test == 'all':
-        for name, session in all_test_sessions.items():
+        all_results_bools = []
+        for name, (session, target_result) in all_test_sessions.items():
             print('testing', name)
-            run_a_test_session(session)
+            result = run_a_test_session(session)
+            test_bool = result == target_result
+            print(test_bool, result)
+            all_results_bools.append(test_bool)
+
+        print(all(all_results_bools))
 
     else:
         print('unknown test suite', args.test)
