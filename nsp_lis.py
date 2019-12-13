@@ -60,7 +60,7 @@ def atom(token):
 def standard_env():
     "An environment with some Scheme standard procedures."
     env = Env()
-    env.update(vars(math)) # sin, cos, sqrt, pi, ...
+    #env.update(vars(math)) # sin, cos, sqrt, pi, ...
     env.update({
         '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
         '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
@@ -189,7 +189,7 @@ global_env = standard_env()
 def repl(prompt='lis.py> '):
     "A prompt-read-eval-print loop."
     while True:
-        val = eval(parse(input(prompt)))
+        val = lisp_eval(parse(input(prompt)))
         if val is not None: 
             print(lispstr(val))
 
@@ -207,11 +207,11 @@ class Procedure(object):
     def __init__(self, parms, body, env):
         self.parms, self.body, self.env = parms, body, env
     def __call__(self, *args): 
-        return eval(self.body, Env(self.parms, args, outer=self.env))
+        return lisp_eval(self.body, Env(self.parms, args, outer=self.env))
 
 ################ eval
 
-def eval(x, env=global_env):
+def lisp_eval(x, env=global_env):
     "Evaluate an expression in an environment."
     if isinstance(x, Symbol):      # variable reference
         # quote symbols
@@ -236,7 +236,7 @@ def eval(x, env=global_env):
         name_path = standard_name_path_list(name_path)
         var_name = name_path[-1]
         path     = name_path
-        env.find(path)[var_name] = eval(exp, env)
+        env.find(path)[var_name] = lisp_eval(exp, env)
 
     elif isinstance(x[0], int):       # convenience
         return x[x[0]]
@@ -252,13 +252,13 @@ def eval(x, env=global_env):
     elif x[0] == 'env':
         #nsp = Env(outer=env)
         nsp = Env() # TODO: it is a completely anonymous env now, should it be like that or should it attach in the lexical structure?
-        args = [eval(exp, env) for exp in x[1:]]
+        args = [lisp_eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
 
     elif x[0] == 'env_attached':
         nsp = Env(outer=env)
-        args = [eval(exp, env) for exp in x[1:]]
+        args = [lisp_eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
 
@@ -267,15 +267,15 @@ def eval(x, env=global_env):
         return exp
     elif x[0] == 'if':             # (if test conseq alt)
         (_, test, conseq, alt) = x
-        exp = (conseq if eval(test, env) else alt)
-        return eval(exp, env)
+        exp = (conseq if lisp_eval(test, env) else alt)
+        return lisp_eval(exp, env)
 
     elif x[0] == 'define':         # (define var exp)
         (_, name_path, exp) = x
 
         # dynamic names in define
         if isinstance(name_path, List):
-            name_path = eval(name_path, env)
+            name_path = lisp_eval(name_path, env)
 
         name_path = standard_name_path_list(name_path)
         var_name = name_path[-1]
@@ -293,16 +293,20 @@ def eval(x, env=global_env):
                 env[name] = new_env
                 env = new_env
 
-        env[var_name] = eval(exp, env)
+        var = lisp_eval(exp, env)
+        env[var_name] = var
+        return var
 
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
         return Procedure(parms, body, env)
     else:                          # (proc arg...)
-        proc = eval(x[0], env)
-        args = [eval(exp, env) for exp in x[1:]]
+        proc = lisp_eval(x[0], env)
+        args = [lisp_eval(exp, env) for exp in x[1:]]
         return proc(*args)
 
+def lisp_eval_str(string):
+    return lisp_eval(parse(string))
 
 all_test_sessions = OrderedDict()
 last_test_session_id = 0
@@ -322,7 +326,7 @@ def add_tests(command_session, name=None, good_result='SUCCESS!'):
         all_test_sessions[name] = test_and_result
     last_test_session_id += 1
 
-def run_a_test_session(command_session, eval_proc=eval):
+def run_a_test_session(command_session, eval_proc=lisp_eval):
     print('running the test session')
     try:
         #
@@ -340,40 +344,6 @@ def run_a_test_session(command_session, eval_proc=eval):
         #
         traceback.print_exc()
         return 'ERROR!'
-
-
-add_tests([
-'(+ 1 2)',
-'(+ (+ 11 28) 2)',
-'(+ (+ 11 28) (* 1 2))',
-'(+ (list 1 2 3) (list 34 3 2))',
-'(define foo (lambda (x y) (+ 2 (+ x y))))',
-'(foo 4 2)',
-'(+ (quote foo) (quote _bar))',
-'(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))',
-'(foo_bar 4 2)',
-], name='passed_tests')
-
-add_tests([
-'(define foo (lambda (x y) (+ 2 (+ x y))))',
-"foo",
-"'foo",
-"(define (+ 'foo '_bar) (lambda (x y) (+ 2 (+ x y))))",
-'(foo_bar 4 2)',
-], 'test_string_quote')
-
-add_tests([
-"(1 'foo 'bar 77)",
-"(3 'foo 'bar 77)",
-"(5 'foo 'bar 77)",
-], 'tests_iterations', 'ERROR!')
-
-add_tests([
-"(quote (env (quote 'foo 5) (quote 3 7)))",
-"(env (quote ('foo 5)) (quote (3 7)))",
-"(env? (env (quote ('foo 5)) (quote (3 7))))",
-"((env (quote ('foo 5)) (quote (3 7))) 3)",
-], 'tests_namespaces')
 
 add_tests([
 "(env (quote ('foo 5)) (quote (3 7)))",
@@ -445,18 +415,21 @@ if __name__ == '__main__':
     else:
         assert all_test_sessions
 
-    if args.test == 'last':
-        name, (last_session, target_result) = all_test_sessions.popitem() 
+    if args.test == 'last' or args.test in all_test_sessions:
+        if args.test == 'last':
+            name, (focus_session, target_result) = all_test_sessions.popitem() 
+        else:
+            name, (focus_session, target_result) = args.test, all_test_sessions[args.test]
         print('testing', name)
-        result = run_a_test_session(last_session)
+        result = run_a_test_session(focus_session)
         print(result == target_result, result)
 
     elif args.test.isnumeric():
         for i in range(int(args.test)):
             all_test_sessions.popitem()
-        name, (last_session, target_result) = all_test_sessions.popitem() 
+        name, (focus_session, target_result) = all_test_sessions.popitem() 
         print('testing', name)
-        result = run_a_test_session(last_session)
+        result = run_a_test_session(focus_session)
         print(result == target_result, result)
 
     elif args.test == 'all':
