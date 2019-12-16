@@ -1,4 +1,4 @@
-################ Lispy: Scheme Interpreter in Python
+################ Lispy: not-Scheme Interpreter in Python
 
 ## (c) Peter Norvig, 2010-16; See http://norvig.com/lispy.html
 
@@ -311,43 +311,6 @@ def lisp_eval(x, env=global_env):
 
 def lisp_eval_str(string):
     return lisp_eval(parse(string))
-
-all_test_sessions = OrderedDict()
-last_test_session_id = 0
-
-def add_tests(command_session, name=None, good_result='SUCCESS!'):
-    global last_test_session_id
-
-    test_and_result = command_session, good_result
-
-    if name is None:
-        all_test_sessions[last_test_session_id] = test_and_result
-    elif name in all_test_sessions:
-        new_name = name + '_%d' % last_test_session_id
-        print('a test session %s already exists, adding this under the name %s' % (name, new_name))
-        all_test_sessions[new_name] = test_and_result
-    else:
-        all_test_sessions[name] = test_and_result
-    last_test_session_id += 1
-
-def run_a_test_session(command_session, eval_proc=lisp_eval):
-    print('running the test session')
-    try:
-        #
-        #test(command_session)
-        for t in command_session:
-            stdout.write("%40s " % t)
-            val = eval_proc(parse(t))
-            if val is not None: 
-                print("= %s" % lispstr(val))
-            else:
-                print("  None")
-
-        return 'SUCCESS!'
-    except:
-        #
-        traceback.print_exc()
-        return 'ERROR!'
 
 
 if __name__ == '__main__':
