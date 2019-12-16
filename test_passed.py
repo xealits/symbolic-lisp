@@ -17,10 +17,6 @@ from nsp_lis import lisp_eval_str
 import pytest
 
 
-def test_no_tokens():
-    with pytest.raises(SyntaxError):
-        lisp_eval_str("")
-
 @pytest.mark.parametrize("noneref", [
     ("(None)"),
 ])

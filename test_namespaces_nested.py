@@ -28,6 +28,7 @@ def redefine_foo_bar_env():
     foo_env = lisp_eval_str("(define foo (env (quote ('foo 5)) (quote (3 7))))")
     bar_env = lisp_eval_str("(define foo/bar (env))")
     baz_var = lisp_eval_str("(define foo/bar/baz 55)")
+    lisp_eval_str("(define foo/par (env (quote (3 21)) (quote (1 22))))")
     return foo_env, bar_env, baz_var
 
 
@@ -57,6 +58,7 @@ def test_names_bar(redefine_foo_bar_env, varref):
 @pytest.mark.parametrize('varref', [
   ("((foo 'bar) 'baz)"),
   ('foo/bar/baz'),
+  ("((foo 'par) '../bar/baz)"),
 ])
 def test_names_baz(redefine_foo_bar_env, varref):
     _, _, baz = redefine_foo_bar_env
@@ -68,4 +70,5 @@ def test_env_default(redefine_foo_bar_env):
 
 def test_baz(redefine_foo_bar_env):
     assert lisp_eval_str("(+ foo/bar/baz 33)") == 55 + 33
-
+    lisp_eval_str("(define /foo/bar/baz2 foo/bar/baz)")
+    assert lisp_eval_str("/foo/bar/baz") == lisp_eval_str("foo/bar/baz2")

@@ -10,7 +10,6 @@ from collections import OrderedDict
 
 import re
 from sys import stdout, exit
-import argparse
 import logging
 import pdb
 import traceback
@@ -31,7 +30,14 @@ def tokenize(s):
     "Convert a string into a list of tokens."
     return s.replace('(',' ( ').replace(')',' ) ').split()
 
-def read_from_tokens(tokens):
+def lispstr(exp):
+    "Convert a Python object back into a Lisp-readable string."
+    if isinstance(exp, List):
+        return '(' + ' '.join(map(lispstr, exp)) + ')' 
+    else:
+        return str(exp)
+
+def read_from_tokens(tokens, nesting=0):
     "Read an expression from a sequence of tokens."
     if len(tokens) == 0:
         raise SyntaxError('unexpected EOF while reading')
@@ -39,8 +45,14 @@ def read_from_tokens(tokens):
     if '(' == token:
         L = []
         while tokens[0] != ')':
-            L.append(read_from_tokens(tokens))
+            L.append(read_from_tokens(tokens, nesting+1))
         tokens.pop(0) # pop off ')'
+        # TODO the rest of tokens could be used for literate documentation
+        # for now would nice to just run them in sequence
+        # but it breaks
+        if nesting==0 and tokens:
+            #
+            raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
         return L
     elif ')' == token:
         raise SyntaxError('unexpected )')
@@ -60,7 +72,7 @@ def atom(token):
 def standard_env():
     "An environment with some Scheme standard procedures."
     env = Env()
-    #env.update(vars(math)) # sin, cos, sqrt, pi, ...
+    env.update(vars(math)) # sin, cos, sqrt, pi, ...
     env.update({
         '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
         '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
@@ -101,9 +113,10 @@ def no_repeated_slashes(string):
     return re_repetitions.sub(r"\1", string)
 
 def standard_name_path_list(name_path):
-    # a literal
-    if not isinstance(name_path, Symbol):
-        return name_path
+    ## a literal
+    # FIXME: it seems I do not need this at all now
+    #if not isinstance(name_path, Symbol):
+    #    return name_path
 
     # a variable name
     name_path = no_repeated_slashes(name_path)
@@ -143,8 +156,10 @@ class Env(dict):
             name_path = name_path[1:]
         elif start_name == '.':
             start_env = self
+            name_path = name_path[1:]
         elif start_name == '..':
             start_env = self.outer
+            name_path = name_path[1:]
         else:
             #return self if (var in self) else self.outer.bubble_find(var)
             start_env = self.bubble_find(start_name) #[start_name] # it must be another env
@@ -180,30 +195,11 @@ class Env(dict):
             return default
 
         #return self.find(path)[key] if key in self.find(path) else default
-        return self.find(path)[key]
+        #return self.find(path)[key]
+        return located_var[var_name]
 
 global_env = standard_env()
 
-def reset_global_env():
-    global global_env
-    global_env.clear()
-    global_env.update(standard_env())
-
-################ Interaction: A REPL
-
-def repl(prompt='lis.py> '):
-    "A prompt-read-eval-print loop."
-    while True:
-        val = lisp_eval(parse(input(prompt)))
-        if val is not None: 
-            print(lispstr(val))
-
-def lispstr(exp):
-    "Convert a Python object back into a Lisp-readable string."
-    if isinstance(exp, List):
-        return '(' + ' '.join(map(lispstr, exp)) + ')' 
-    else:
-        return str(exp)
 
 ################ Procedures
 
@@ -311,23 +307,4 @@ def lisp_eval(x, env=global_env):
 
 def lisp_eval_str(string):
     return lisp_eval(parse(string))
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        formatter_class = argparse.RawDescriptionHelpFormatter,
-        description = "run tests and start repl",
-        epilog = """Example:\nrlwrap python lis_sym.py\nrlwrap python lis_sym.py --debug"""
-        )
-
-    parser.add_argument("--debug",  action='store_true', help="DEBUG level of logging")
-
-    args = parser.parse_args()
-
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
-    repl()
 
