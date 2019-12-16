@@ -113,11 +113,6 @@ def no_repeated_slashes(string):
     return re_repetitions.sub(r"\1", string)
 
 def standard_name_path_list(name_path):
-    ## a literal
-    # FIXME: it seems I do not need this at all now
-    #if not isinstance(name_path, Symbol):
-    #    return name_path
-
     # a variable name
     name_path = no_repeated_slashes(name_path)
     if name_path[-1] == '/':
@@ -156,10 +151,8 @@ class Env(dict):
             name_path = name_path[1:]
         elif start_name == '.':
             start_env = self
-            name_path = name_path[1:]
         elif start_name == '..':
-            start_env = self.outer
-            name_path = name_path[1:]
+            start_env = self # self.outer
         else:
             #return self if (var in self) else self.outer.bubble_find(var)
             start_env = self.bubble_find(start_name) #[start_name] # it must be another env
@@ -194,8 +187,6 @@ class Env(dict):
         if located_var is None:
             return default
 
-        #return self.find(path)[key] if key in self.find(path) else default
-        #return self.find(path)[key]
         return located_var[var_name]
 
 global_env = standard_env()
@@ -242,15 +233,6 @@ def lisp_eval(x, env=global_env):
     elif isinstance(x[0], int):       # convenience
         return x[x[0]]
 
-    # call to Env does it now
-    #elif isinstance(x[0], Env):
-    #    nsp, key = x
-    #    #return nsp[key] # TODO: get absolute or relative name!
-    #    name_path = standard_name_path_list(key)
-    #    var_name = name_path[-1]
-    #    path     = name_path
-    #    return nsp.find(path)[var_name]
-
     elif x[0] == 'env':
         nsp = Env(outer=env)
         args = [lisp_eval(exp, env) for exp in x[1:]]
@@ -282,20 +264,30 @@ def lisp_eval(x, env=global_env):
         var_name = name_path[-1]
         path     = name_path[:-1]
 
-        # nest down the path
+        # nest down the path creating env-s
+        nested_env = env
         for name in path:
             if   name == '':
-                env = global_env
-            elif name in env:
-                assert isinstance(env[name], Env)
-                env = env[name]
+                nested_env = global_env
+            elif name in nested_env:
+                assert isinstance(nested_env[name], Env)
+                nested_env = nested_env[name]
             else:
-                new_env = Env(outer=env)
-                env[name] = new_env
-                env = new_env
+                new_env = Env(outer=nested_env)
+                nested_env[name] = new_env
+                nested_env = new_env
 
+        # but eval expr in the original Env of define!
         var = lisp_eval(exp, env)
-        env[var_name] = var
+        #var = lisp_eval(exp, nested_env)
+
+        # the result is attached in the nested chain of env-s
+        nested_env[var_name] = var
+        # if the result is an env and it is not anonymous
+        # set the outer to the nested chain of env-s
+        if isinstance(var, Env) and var.outer is not None:
+            var.outer = nested_env
+
         return var
 
     elif x[0] == 'lambda':         # (lambda (var...) body)
