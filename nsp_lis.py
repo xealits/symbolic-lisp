@@ -184,6 +184,11 @@ class Env(dict):
 
 global_env = standard_env()
 
+def reset_global_env():
+    global global_env
+    global_env.clear()
+    global_env.update(standard_env())
+
 ################ Interaction: A REPL
 
 def repl(prompt='lis.py> '):

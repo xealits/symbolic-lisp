@@ -27,12 +27,17 @@ def test_calc1(test_input, expected):
 def test_add_lists():
     assert lisp_eval_str('(+ (list 1 2 3) (list 34 3 2))') == lisp_eval_str('(list 1 2 3 34 3 2)')
 
-lisp_eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
+@pytest.fixture
+def redefine_foo():
+    lisp_eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
 
-def test_define():
+#def test_define_0():
+#    assert lisp_eval_str('(foo 4 2)') == 8
+
+def test_define(redefine_foo):
     assert lisp_eval_str('(foo 4 2)') == 8
 
-def test_define2():
+def test_define2(redefine_foo):
     assert lisp_eval_str('(foo 5 2)') == 9
 
 def test_concat_symbols():

@@ -10,8 +10,8 @@ add_tests([
 
 from nsp_lis import lisp_eval_str
 
-var_foo_addr = lisp_eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
 
 def test_foo():
+    var_foo_addr = lisp_eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
     assert lisp_eval_str('foo') is var_foo_addr
 

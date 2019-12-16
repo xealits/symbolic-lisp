@@ -4,7 +4,7 @@
 # or pass a string with files to run
 testup: focus_file=
 testup:
-	./test_session.sh ${focus_file}
+	./session_test.sh ${focus_file}
 
 # just to remember it
 test:
