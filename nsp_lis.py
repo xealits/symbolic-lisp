@@ -255,14 +255,13 @@ def lisp_eval(x, env=global_env):
         return nsp.find(path)[var_name]
 
     elif x[0] == 'env':
-        #nsp = Env(outer=env)
-        nsp = Env() # TODO: it is a completely anonymous env now, should it be like that or should it attach in the lexical structure?
+        nsp = Env(outer=env)
         args = [lisp_eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
 
-    elif x[0] == 'env_attached':
-        nsp = Env(outer=env)
+    elif x[0] == 'env_anonymous':
+        nsp = Env()
         args = [lisp_eval(exp, env) for exp in x[1:]]
         nsp.update(args)
         return nsp
@@ -349,25 +348,6 @@ def run_a_test_session(command_session, eval_proc=lisp_eval):
         #
         traceback.print_exc()
         return 'ERROR!'
-
-add_tests([
-"(env (quote ('foo 5)) (quote (3 7)))",
-"(define foo (env (quote ('foo 5)) (quote (3 7))))",
-"foo",
-"/foo",
-"/./foo",
-"./foo",
-"././foo",
-"(define foo/bar/baz 55)",
-"foo",
-"(foo 'bar)",
-"(foo 'brr 51)",
-"foo/bar",
-"foo/bar/",
-"((foo 'bar) 'baz)",
-"foo/bar/baz",
-"(+ foo/bar/baz 33)",
-], 'tests_namespaces_nested')
 
 add_tests([
 "None",
