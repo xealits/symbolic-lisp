@@ -1,5 +1,6 @@
 '''
 add_tests([
+"(None)",
 '(+ 1 2)',
 '(+ (+ 11 28) 2)',
 '(+ (+ 11 28) (* 1 2))',
@@ -14,6 +15,17 @@ add_tests([
 
 from nsp_lis import lisp_eval_str
 import pytest
+
+
+def test_no_tokens():
+    with pytest.raises(SyntaxError):
+        lisp_eval_str("")
+
+@pytest.mark.parametrize("noneref", [
+    ("(None)"),
+])
+def test_none(noneref):
+    assert lisp_eval_str(noneref) is None
 
 
 @pytest.mark.parametrize("test_input,expected", [

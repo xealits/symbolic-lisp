@@ -349,32 +349,6 @@ def run_a_test_session(command_session, eval_proc=lisp_eval):
         traceback.print_exc()
         return 'ERROR!'
 
-add_tests([
-"None",
-"(None)",
-"(define foo  (env (quote ('foo 5)) (quote (3 7))))",
-"(define foo2 (env (quote  (foo 5)) (quote (3 7))))",
-"(define bar (env_attached (quote ('foo 5)) (quote (3 7))))",
-"(define bar/baz (env_attached (quote ('foo 5)) (quote (3 7))))",
-"(define globalvar 55)",
-"foo",
-"bar",
-"(foo 3)",
-"(bar 3)",
-"(bar 'globalvar)",
-"(bar 'baz)",
-"((bar 'baz) 'globalvar)",
-"(in? (quote (3 7)) 3)",
-"(in? (quote (4 7)) 3)",
-"(in? foo  3)",
-"(in? foo  'foo)",
-"(in? foo2 'foo)",
-"(foo 'globalvar 1)",
-"(foo 'globalvar)",
-"(foo 333)",
-"(foo 'globalvar)",
-], 'tests_namespaces_attached')
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -384,7 +358,6 @@ if __name__ == '__main__':
         )
 
     parser.add_argument("--debug",  action='store_true', help="DEBUG level of logging")
-    parser.add_argument('--test',   nargs='?', const='last', type=str, help="just run tests, 'last' is default, 'all' for all tests")
 
     args = parser.parse_args()
 
@@ -393,42 +366,5 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
 
-    if not args.test:
-        repl()
-        #sym_repl()
-
-    else:
-        assert all_test_sessions
-
-    if args.test == 'last' or args.test in all_test_sessions:
-        if args.test == 'last':
-            name, (focus_session, target_result) = all_test_sessions.popitem() 
-        else:
-            name, (focus_session, target_result) = args.test, all_test_sessions[args.test]
-        print('testing', name)
-        result = run_a_test_session(focus_session)
-        print(result == target_result, result)
-
-    elif args.test.isnumeric():
-        for i in range(int(args.test)):
-            all_test_sessions.popitem()
-        name, (focus_session, target_result) = all_test_sessions.popitem() 
-        print('testing', name)
-        result = run_a_test_session(focus_session)
-        print(result == target_result, result)
-
-    elif args.test == 'all':
-        all_results_bools = []
-        for name, (session, target_result) in all_test_sessions.items():
-            print('testing', name)
-            result = run_a_test_session(session)
-            test_bool = result == target_result
-            print(test_bool, result)
-            all_results_bools.append(test_bool)
-
-        print(all(all_results_bools))
-
-    else:
-        print('unknown test suite', args.test)
-        exit(50)
+    repl()
 
