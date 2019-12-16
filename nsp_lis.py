@@ -234,7 +234,7 @@ def lisp_eval(x, env=global_env):
     elif x[0] == 'set!':           # (set! var exp)
         (_, var, exp) = x
 
-        name_path = standard_name_path_list(name_path)
+        name_path = standard_name_path_list(var)
         var_name = name_path[-1]
         path     = name_path
         env.find(path)[var_name] = lisp_eval(exp, env)
@@ -242,13 +242,14 @@ def lisp_eval(x, env=global_env):
     elif isinstance(x[0], int):       # convenience
         return x[x[0]]
 
-    elif isinstance(x[0], Env):
-        nsp, key = x
-        #return nsp[key] # TODO: get absolute or relative name!
-        name_path = standard_name_path_list(key)
-        var_name = name_path[-1]
-        path     = name_path
-        return nsp.find(path)[var_name]
+    # call to Env does it now
+    #elif isinstance(x[0], Env):
+    #    nsp, key = x
+    #    #return nsp[key] # TODO: get absolute or relative name!
+    #    name_path = standard_name_path_list(key)
+    #    var_name = name_path[-1]
+    #    path     = name_path
+    #    return nsp.find(path)[var_name]
 
     elif x[0] == 'env':
         nsp = Env(outer=env)

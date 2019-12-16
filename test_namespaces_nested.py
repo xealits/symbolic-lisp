@@ -25,8 +25,9 @@ from nsp_lis import lisp_eval_str, Env
 
 @pytest.fixture
 def redefine_foo_bar_env():
-    foo_env = lisp_eval_str("(define foo (env (quote ('foo 5)) (quote (3 7))))")
+    foo_env = lisp_eval_str("(define foo (env (quote (shmoo 5)) (quote (3 7))))")
     bar_env = lisp_eval_str("(define foo/bar (env))")
+    mpt_env = lisp_eval_str("(define foo/stp/mpt/boo 600)")
     baz_var = lisp_eval_str("(define foo/bar/baz 55)")
     lisp_eval_str("(define foo/par (env (quote (3 21)) (quote (1 22))))")
     return foo_env, bar_env, baz_var
@@ -72,3 +73,10 @@ def test_baz(redefine_foo_bar_env):
     assert lisp_eval_str("(+ foo/bar/baz 33)") == 55 + 33
     lisp_eval_str("(define /foo/bar/baz2 foo/bar/baz)")
     assert lisp_eval_str("/foo/bar/baz") == lisp_eval_str("foo/bar/baz2")
+
+def test_nesting(redefine_foo_bar_env):
+    assert lisp_eval_str('foo/stp/mpt/boo') == 600
+    assert lisp_eval_str("(foo 'shmoo)") == 5
+    lisp_eval_str("(set! foo/shmoo 11)")
+    assert lisp_eval_str("(foo 'shmoo)") == 11
+

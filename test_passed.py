@@ -57,3 +57,9 @@ def test_define_dynamic():
 def test_define_dynamic_eval():
     assert lisp_eval_str('(foo_bar 4 2)') == lisp_eval_str('(foo 4 2)')
 
+@pytest.mark.parametrize("test_input,expected", [
+  ('(if 1 4 2)', 4),
+  ('(if 0 4 2)', 2),
+])
+def test_if(test_input, expected):
+    assert lisp_eval_str(test_input) == expected
