@@ -13,13 +13,16 @@ add_tests([
 '''
 
 from nsp_lis import lisp_eval_str
+import pytest
 
 
-
-def test_calc1():
-    assert lisp_eval_str('(+ 1 2)') == 3
-    assert lisp_eval_str('(+ (+ 11 28) 2)') == 41
-    assert lisp_eval_str('(+ (+ 11 28) (* 1 2))') == 41
+@pytest.mark.parametrize("test_input,expected", [
+    ("(+ 1 2)", 3),
+    ("(+ (+ 11 28) 2)", 41),
+    ("(+ (+ 11 28) (* 1 2))", 41),
+])
+def test_calc1(test_input, expected):
+    assert lisp_eval_str(test_input) == expected
 
 def test_add_lists():
     assert lisp_eval_str('(+ (list 1 2 3) (list 34 3 2))') == lisp_eval_str('(list 1 2 3 34 3 2)')

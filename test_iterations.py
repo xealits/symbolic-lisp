@@ -9,10 +9,12 @@ add_tests([
 import pytest
 from nsp_lis import lisp_eval_str
 
-
-def test_indexes():
-    assert lisp_eval_str("(1 'foo 'bar 77)") == "'foo"
-    assert lisp_eval_str("(3 'foo 'bar 77)") == 77
+@pytest.mark.parametrize('test_input, expected', [
+  ("(1 'foo 'bar 77)", "'foo"),
+  ("(3 'foo 'bar 77)", 77),
+])
+def test_indexes(test_input, expected):
+    assert lisp_eval_str(test_input) == expected
 
 def test_index_boundary():
     #with pytest.raises(ZeroDivisionError):
