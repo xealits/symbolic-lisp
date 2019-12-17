@@ -4,4 +4,4 @@ before_install:
     - pip    --version
     - pytest --version
 script:
-    - pytest --cov-report term --cov=nsp_lis
+    - pytest --cov-report term --cov=nsp_lis test_*.py
