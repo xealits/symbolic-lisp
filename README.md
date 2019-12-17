@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/xealits/symbolic-lisp.svg?branch=master)](https://travis-ci.com/xealits/symbolic-lisp)
+[![codecov](https://codecov.io/gh/xealits/symbolic-lisp/branch/master/graph/badge.svg)](https://codecov.io/gh/xealits/symbolic-lisp)
 
 A small lisp-based macro system for a couple 8-bit electronics projects.
 
