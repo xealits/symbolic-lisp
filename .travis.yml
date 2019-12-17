@@ -3,5 +3,6 @@ before_install:
     - python --version
     - pip    --version
     - pytest --version
+    - pip install pytest-cov
 script:
-    - pytest --cov-report term --cov=nsp_lis test_*.py
+    - pytest --cov-report term --cov=nsp_lis
