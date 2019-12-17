@@ -1,3 +1,7 @@
 language: python
+before_install:
+    - python --version
+    - pip    --version
+    - pytest --version
 script:
-    - pytest
+    - pytest --cov-report term --cov=nsp_lis
