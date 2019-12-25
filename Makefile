@@ -16,5 +16,3 @@ test_coverage: module=nsp_lis
 test_coverage: options=
 test_coverage:
 	PYTHONPATH=. pytest ./ --cov ${module}  ${options}
-
-

@@ -121,9 +121,10 @@ def standard_name_path_list(name_path):
 
 class Env(dict):
     "An environment: a dict of {'var':val} pairs, with an outer Env."
-    def __init__(self, parms=(), args=(), outer=None):
+    def __init__(self, parms=(), args=(), outer=None, global_env=None):
         self.update(zip(parms, args))
         self.outer = outer
+        self.global_env = self if global_env is None else global_env
 
     def bubble_find(self, var):
         "Find the outermost Env where var appears."
@@ -146,7 +147,7 @@ class Env(dict):
         start_name = name_path[0]
 
         if   start_name == '':
-            start_env = global_env
+            start_env = self.global_env
             # and remove the root name
             name_path = name_path[1:]
         elif start_name == '.':
@@ -189,9 +190,6 @@ class Env(dict):
 
         return located_var[var_name]
 
-global_env = standard_env()
-
-
 ################ Procedures
 
 class Procedure(object):
@@ -202,6 +200,9 @@ class Procedure(object):
         return lisp_eval(self.body, Env(self.parms, args, outer=self.env))
 
 ################ eval
+
+# TODO: this per-module env will not be needed, then remove it?
+global_env = standard_env()
 
 def lisp_eval(x, env=global_env):
     "Evaluate an expression in an environment."
@@ -298,6 +299,42 @@ def lisp_eval(x, env=global_env):
         args = [lisp_eval(exp, env) for exp in x[1:]]
         return proc(*args)
 
+
 def lisp_eval_str(string):
     return lisp_eval(parse(string))
 
+
+class GlobalEnv(Env):
+    '''The behavior of a global environment.
+
+    The important part is the global state.
+    That is what needs to be encapsulated,
+    lisp_eval is simply added to it with no reciprocal dependency.
+
+    Hence, define the logic of the global state:
+    the Env and the lisp eval methods attached.
+    '''
+
+    def __init__(self, env=None):
+        '''Initialize an independent global environment.
+
+        env = None or Env class
+            the initial state of the global environment
+        '''
+
+        # make an empty Env
+        super().__init__()
+
+        # populate it with defaults
+        if env is None:
+            self.update(standard_env())
+        elif isinstance(env, Env):
+            self.update(env)
+        else:
+            raise TypeError("wrong content for GlobalEnv: %s" % repr(env))
+
+    def eval(self, x):
+        return lisp_eval(x, self)
+
+    def eval_str(self, string):
+        return self.eval(parse(string))
