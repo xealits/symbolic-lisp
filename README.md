@@ -1,14 +1,13 @@
 [![Build Status](https://travis-ci.com/xealits/symbolic-lisp.svg?branch=master)](https://travis-ci.com/xealits/symbolic-lisp)
 [![codecov](https://codecov.io/gh/xealits/symbolic-lisp/branch/master/graph/badge.svg)](https://codecov.io/gh/xealits/symbolic-lisp)
 
-A small lisp-based macro system for a couple 8-bit electronics projects.
+A small lisp-like macro language for a couple assembly programming projects.
 
-The goal is:
+The goals:
 
-* to make simple, practical metaprogramming features easily accessible
-* facilitate the metaprogramming procedures over the usual ones
-* have an easily extensible system.
+* make simple practical metaprogramming features easily accessible
+* an easily extensible system.
 
-It should facilitate programming a couple electronics projects.
-But the system can also work as a fun shell program or a mini glue-language.
+It helps out in programming a couple electronics projects.
+But the system can also work as a fun shell program or a mini glue language.
 
