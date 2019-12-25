@@ -6,6 +6,6 @@ before_install:
     - pip install pytest-cov
     - pip install codecov
 script:
-    - pytest --cov-report term --cov=nsp_lis
+    - PYTHONPATH=. pytest --cov-report term --cov=nsp_lis
 after_success:
     - codecov
