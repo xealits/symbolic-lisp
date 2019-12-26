@@ -25,7 +25,7 @@ add_tests([
 '''
 
 import pytest
-from nsp_lis import lisp_eval_str
+from sym_lis import lisp_eval_str
 
 
 @pytest.fixture

@@ -4,10 +4,10 @@ import argparse
 import logging
 from textwrap import dedent
 
-from nsp_lis import lisp_eval, parse, List, lispstr
+from sym_lis import lisp_eval, parse, List, lispstr
 
 
-def repl(prompt='nsp_repl> '):
+def repl(prompt='sym_repl> '):
     "A prompt-read-eval-print loop."
     while True:
         input_string = input(prompt)
@@ -22,9 +22,9 @@ if __name__ == '__main__':
         formatter_class = argparse.RawDescriptionHelpFormatter,
         description = "run tests and start repl",
         epilog = 'Example:' + dedent("""
-        rlwrap python3 nsp_repl.py
-        rlwrap python3 nsp_repl.py --debug
-        rlwrap ./nsp_repl.py""")
+        rlwrap python3 sym_repl.py
+        rlwrap python3 sym_repl.py --debug
+        rlwrap ./sym_repl.py""")
         )
 
     parser.add_argument("--debug",  action='store_true', help="DEBUG level of logging")

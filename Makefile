@@ -12,7 +12,7 @@ test:
 
 # make test_coverage options="--cov-report term-missing"
 # make test_coverage options="--cov-report annotate"
-test_coverage: module=nsp_lis
+test_coverage: module=sym_lis
 test_coverage: options=
 test_coverage:
 	PYTHONPATH=. pytest ./ --cov ${module}  ${options}

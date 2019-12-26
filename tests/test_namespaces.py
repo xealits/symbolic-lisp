@@ -7,7 +7,7 @@ add_tests([
 ], 'tests_namespaces')
 '''
 
-from nsp_lis import lisp_eval_str, Env
+from sym_lis import lisp_eval_str, Env
 
 
 def test_list():

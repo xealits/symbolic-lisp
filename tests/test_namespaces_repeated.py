@@ -1,5 +1,5 @@
 import pytest
-from nsp_lis import lisp_eval_str, Env
+from sym_lis import lisp_eval_str, Env
 
 
 @pytest.fixture

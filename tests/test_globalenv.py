@@ -1,5 +1,5 @@
 import pytest
-from nsp_lis import GlobalEnv, Env
+from sym_lis import GlobalEnv, Env
 
 env = GlobalEnv()
 
