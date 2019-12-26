@@ -88,7 +88,8 @@ def standard_env():
         'length':  len, 
         'list':    lambda *x: list(x), 
         'list?':   lambda x: isinstance(x,list), 
-        'map':     map,
+        # list-ing the map objects in Python3
+        'map':     lambda *x: list(map(*x)),
         'max':     max,
         'min':     min,
         'not':     op.not_,
@@ -231,9 +232,6 @@ def lisp_eval(x, env=global_env):
         path     = name_path
         env.find(path)[var_name] = lisp_eval(exp, env)
 
-    elif isinstance(x[0], int):       # convenience
-        return x[x[0]]
-
     elif x[0] == 'env':
         nsp = Env(outer=env)
         args = [lisp_eval(exp, env) for exp in x[1:]]
@@ -296,8 +294,16 @@ def lisp_eval(x, env=global_env):
         return Procedure(parms, body, env)
     else:                          # (proc arg...)
         proc = lisp_eval(x[0], env)
-        args = [lisp_eval(exp, env) for exp in x[1:]]
-        return proc(*args)
+        if isinstance(proc, int):
+            # convenience
+            _, a_list = x
+            args = lisp_eval(a_list, env)
+            #pdb.set_trace()
+            return args[proc]
+        else:
+            # proc must be a callable
+            args = [lisp_eval(exp, env) for exp in x[1:]]
+            return proc(*args)
 
 
 def lisp_eval_str(string):
