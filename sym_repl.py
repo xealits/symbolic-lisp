@@ -2,18 +2,36 @@
 
 import argparse
 import logging
+#import readline # it blocks rlwrap
 from textwrap import dedent
 
-from sym_lis import lisp_eval, parse, List, lispstr
+from sym_lis import lisp_eval_str, parse, List, lispstr
 
+
+def handy_input(prompt='> '):
+    'An `input` with 2 newline characters ending.'
+
+    all_input_strings = ''
+
+    # prompt the user for input
+    given_input = input(prompt)
+    all_input_strings += given_input
+    # and handle the two newline ending
+    while given_input:
+        # if previous input is not empty
+        # then prompt again
+        given_input = input('')
+        all_input_strings += '\n' + given_input
+
+    return all_input_strings
 
 def repl(prompt='sym_repl> '):
     "A prompt-read-eval-print loop."
     while True:
-        input_string = input(prompt)
-        if not input_string.strip(): continue
+        input_program = handy_input(prompt)
+        if not input_program.strip(): continue
 
-        val = lisp_eval(parse(input_string))
+        val = lisp_eval_str(input_program)
         if val is not None: 
             print(lispstr(val))
 

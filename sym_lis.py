@@ -24,7 +24,7 @@ List   = list         # A Lisp List is implemented as a Python list
 
 def parse(program):
     "Read a Scheme expression from a string."
-    return read_from_tokens(tokenize(program))
+    return read_all_from_tokens(tokenize(program))
 
 def tokenize(s):
     "Convert a string into a list of tokens."
@@ -37,23 +37,35 @@ def lispstr(exp):
     else:
         return str(exp)
 
+def read_all_from_tokens(tokens):
+    '''Read all ()-closed expressions from tokens.'''
+
+    all_expr = []
+    while tokens:
+        an_expr = read_from_tokens(tokens)
+        # read_from_tokens pops the expression from tokens
+        all_expr.append(an_expr)
+
+    return all_expr
+
 def read_from_tokens(tokens, nesting=0):
-    "Read an expression from a sequence of tokens."
+    "Read one expression from a sequence of tokens."
     if len(tokens) == 0:
         raise SyntaxError('unexpected EOF while reading')
     token = tokens.pop(0)
+    # parse one nesting
     if '(' == token:
-        L = []
+        one_expr = []
         while tokens[0] != ')':
-            L.append(read_from_tokens(tokens, nesting+1))
+            one_expr.append(read_from_tokens(tokens, nesting+1))
         tokens.pop(0) # pop off ')'
         # TODO the rest of tokens could be used for literate documentation
         # for now would nice to just run them in sequence
         # but it breaks
-        if nesting==0 and tokens:
-            #
-            raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
-        return L
+        #if nesting==0 and tokens:
+        #    #
+        #    raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
+        return one_expr
     elif ')' == token:
         raise SyntaxError('unexpected )')
     else:
@@ -222,6 +234,12 @@ def lisp_eval(x, env=global_env):
         return x                
 
     # in the rest x is List
+    # first cases when x[0] is a keyword
+    # they cannot be dynamically generated TODO: change it?
+    # it seems this is the spot of the dynamic name scope
+    # defined functions operate in their lexical scope
+    # (they are defined into the lexical scope)
+    # the keywords have access to the current namespace
 
     # same as look-up but with set at the end
     elif x[0] == 'set!':           # (set! var exp)
@@ -289,6 +307,16 @@ def lisp_eval(x, env=global_env):
 
         return var
 
+    elif x[0] == 'source':
+        filenames = [lisp_eval(exp, env) for exp in x[1:]]
+        results = []
+        for fname in filenames:
+            with open(fname) as f:
+                file_program = f.read()
+                res = lisp_eval_str(file_program, env)
+                results.append(res)
+        return results
+
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
         return Procedure(parms, body, env)
@@ -306,8 +334,11 @@ def lisp_eval(x, env=global_env):
             return proc(*args)
 
 
-def lisp_eval_str(string):
-    return lisp_eval(parse(string))
+def lisp_eval_str(string, env=None):
+    res = None
+    for expr in parse(string):
+        res = lisp_eval(expr) if env is None else lisp_eval(expr, env)
+    return res
 
 
 class GlobalEnv(Env):
@@ -343,4 +374,7 @@ class GlobalEnv(Env):
         return lisp_eval(x, self)
 
     def eval_str(self, string):
-        return self.eval(parse(string))
+        res = None
+        for expr in parse(string):
+            res = self.eval(expr)
+        return res
