@@ -1,4 +1,4 @@
-from sym_lis import GlobalEnv
+from sym_lis import GlobalEnv, lispstr, parse
 import pytest
 
 
@@ -20,3 +20,6 @@ def test_closing_parenthes(test_input):
     with pytest.raises(SyntaxError):
         g.eval_str(test_input)
 
+def test_string():
+    inp_str = '(foo bar)'
+    assert lispstr(parse(inp_str)[0]) == inp_str

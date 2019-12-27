@@ -50,14 +50,12 @@ def read_all_from_tokens(tokens):
 
 def read_from_tokens(tokens, nesting=0):
     "Read one expression from a sequence of tokens."
-    if len(tokens) == 0:
-        raise SyntaxError('unexpected EOF while reading')
     token = tokens.pop(0)
     # parse one nesting
     if '(' == token:
-        one_expr = []
+        L_one_expr = List()
         while tokens[0] != ')':
-            one_expr.append(read_from_tokens(tokens, nesting+1))
+            L_one_expr.append(read_from_tokens(tokens, nesting+1))
         tokens.pop(0) # pop off ')'
         # TODO the rest of tokens could be used for literate documentation
         # for now would nice to just run them in sequence
@@ -65,7 +63,7 @@ def read_from_tokens(tokens, nesting=0):
         #if nesting==0 and tokens:
         #    #
         #    raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
-        return one_expr
+        return L_one_expr
     elif ')' == token:
         raise SyntaxError('unexpected )')
     else:
@@ -145,7 +143,8 @@ class Env(dict):
 
         # all global environments (anonymous are the same)
         # have the handler for missing names
-        self['_missing_handler'] = standard_missing_name_handler
+        if self.outer is None:
+            self['_missing_handler'] = standard_missing_name_handler
 
     def find_global_env(self):
         if self.outer is None:
@@ -229,9 +228,9 @@ class Env(dict):
 class Procedure(object):
     "A user-defined Scheme procedure."
     def __init__(self, parms, body, env):
-        self.parms, self.body, self.env = parms, body, env
+        self.parms, self.body, self.outer = parms, body, env
     def __call__(self, *args): 
-        return lisp_eval(self.body, Env(self.parms, args, outer=self.env))
+        return lisp_eval(self.body, Env(self.parms, args, outer=self.outer))
 
 ################ eval
 
@@ -323,7 +322,9 @@ def lisp_eval(x, env=global_env):
         nested_env[var_name] = var
         # if the result is an env and it is not anonymous
         # set the outer to the nested chain of env-s
-        if isinstance(var, Env) and var.outer is not None:
+        attach_scope  = isinstance(var, Env) and var.outer is not None
+        attach_scope |= isinstance(var, Procedure)
+        if attach_scope:
             var.outer = nested_env
 
         return var
