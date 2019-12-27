@@ -11,3 +11,5 @@ The goals:
 It helps out in programming a couple electronics projects.
 But the system can also work as a fun shell program or a mini glue language.
 
+The main module is based on [lispy](http://norvig.com/lispy.html) "100-lines Lisp in Python" example ((c) Peter Norvig 2010-16).
+But it evolved and has changed considerably.

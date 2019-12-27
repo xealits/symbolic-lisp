@@ -1,6 +1,6 @@
-################ Lispy: not-Scheme Interpreter in Python
-
-## (c) Peter Norvig, 2010-16; See http://norvig.com/lispy.html
+# Symbolic Lisp
+# (c) Alex Toldaiev, 2019
+# https://github.com/xealits/symbolic-lisp
 
 from __future__ import division
 import math
