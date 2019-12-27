@@ -84,7 +84,7 @@ def atom(token):
 def standard_env():
     "An environment with some Scheme standard procedures."
     env = Env()
-    env.update(vars(math)) # sin, cos, sqrt, pi, ...
+    #env.update(vars(math)) # sin, cos, sqrt, pi, ...
     env.update({
         '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
         '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
@@ -132,12 +132,26 @@ def standard_name_path_list(name_path):
         name_path = name_path[:-1]
     return name_path.split('/')
 
+def standard_missing_name_handler(varname):
+    #raise NameError("name '%s' is not defined" %varname)
+    #raise TypeError("name '%s' is not defined" %varname)
+    return None
+
 class Env(dict):
     "An environment: a dict of {'var':val} pairs, with an outer Env."
-    def __init__(self, parms=(), args=(), outer=None, global_env=None):
+    def __init__(self, parms=(), args=(), outer=None):
         self.update(zip(parms, args))
         self.outer = outer
-        self.global_env = self if global_env is None else global_env
+
+        # all global environments (anonymous are the same)
+        # have the handler for missing names
+        self['_missing_handler'] = standard_missing_name_handler
+
+    def find_global_env(self):
+        if self.outer is None:
+            return self
+        else:
+            return self.outer.find_global_env()
 
     def bubble_find(self, var):
         "Find the outermost Env where var appears."
@@ -146,11 +160,17 @@ class Env(dict):
         elif self.outer:
             return self.outer.bubble_find(var)
         else:
-            return None
+            # the case when there is no such variable
+            # return self again
+            # request of the missing key will call the programmable handler
+            return self
+
+    def __missing__(self, varname):
+        return self['_missing_handler'](varname)
 
     def find(self, name_path):
         """Find the outermost Env where name_path appears and return the variable from the name_path.
-        Return None if not found."""
+        Return the global Env if not found."""
 
         #name_path = standard_name_path_list(name_path)
         # if the name path is empty
@@ -160,7 +180,7 @@ class Env(dict):
         start_name = name_path[0]
 
         if   start_name == '':
-            start_env = self.global_env
+            start_env = self.find_global_env()
             # and remove the root name
             name_path = name_path[1:]
         elif start_name == '.':
@@ -184,8 +204,9 @@ class Env(dict):
                 start_env = start_env[name]
 
         # the final environment
-        return start_env if name_path[-1] in start_env else None # return None if no such name is defined
+        #return start_env if name_path[-1] in start_env else None # return None if no such name is defined
         #return start_env[name_path[-1]] # or crash
+        return start_env
 
     def __call__(self, key, default=None):
         #return self[key] # TODO: now it is only the current namespace, expand?
@@ -198,7 +219,7 @@ class Env(dict):
         located_var = self.find(path)
 
         # not found variable
-        if located_var is None:
+        if var_name not in located_var:
             return default
 
         return located_var[var_name]
@@ -285,7 +306,7 @@ def lisp_eval(x, env=global_env):
         nested_env = env
         for name in path:
             if   name == '':
-                nested_env = global_env
+                nested_env = nested_env.find_global_env()
             elif name in nested_env:
                 assert isinstance(nested_env[name], Env)
                 nested_env = nested_env[name]

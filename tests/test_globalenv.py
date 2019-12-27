@@ -12,5 +12,6 @@ def test_env_wrong_init():
 
 def test_env_special_init():
     env_empty = GlobalEnv(Env())
-    assert len(env_empty) == 0
+    # test public keys
+    assert len([k for k in env_empty.keys() if k and k[0] != '_']) == 0
 
