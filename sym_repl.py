@@ -23,6 +23,7 @@ def handy_input(prompt='> '):
         given_input = input('')
         all_input_strings += '\n' + given_input
 
+    logging.debug('input script:\n%s' % all_input_strings)
     return all_input_strings
 
 def repl(prompt='sym_repl> '):

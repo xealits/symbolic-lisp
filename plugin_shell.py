@@ -1,5 +1,6 @@
 import logging
-import subprocess, shutil
+import subprocess
+from shutil import which
 
 def prepare_command(comname):
     def command(*args):
@@ -10,7 +11,7 @@ def prepare_command(comname):
 
 def find_command(comname):
     logging.debug(comname)
-    if shutil.which(comname):
+    if which(comname):
         return prepare_command(comname)
     else:
         return None

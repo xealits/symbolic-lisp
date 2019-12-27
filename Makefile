@@ -13,7 +13,9 @@ test:
 
 # make test_coverage options="--cov-report term-missing"
 # make test_coverage options="--cov-report annotate"
+# to cover several modules append them one by one:
+# PYTHONPATH=. pytest ./ --cov sym_repl     ${options} --cov-append
 test_coverage: module=sym_lis
 test_coverage: options=
 test_coverage:
-	PYTHONPATH=. pytest ./ --cov ${module}  ${options}
+	PYTHONPATH=. pytest ./ --cov ${module} ${options}
