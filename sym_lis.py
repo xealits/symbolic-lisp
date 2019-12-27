@@ -8,6 +8,7 @@ import operator as op
 
 from collections import OrderedDict
 
+import importlib
 import re
 from sys import stdout, exit
 import logging
@@ -362,6 +363,26 @@ def lisp_eval_str(string, env=None):
         res = lisp_eval(expr) if env is None else lisp_eval(expr, env)
     return res
 
+class PythonPlugins(Env):
+    '''Import external modules and call their contents.
+    '''
+
+    def __init__(self):
+        '''Creates an empty global Env with 2 procedures: import and get.'''
+
+        # make an empty Env
+        super().__init__()
+
+        self['import'] = self.imp
+        self['get'] = self.get
+
+    def imp(self, modname):
+        self[modname] = importlib.import_module(modname)
+
+    def get(self, objpath):
+        # DANGER: is there is a safer way to do it?
+        return eval(objpath, globals(), self)
+
 
 class GlobalEnv(Env):
     '''The behavior of a global environment.
@@ -392,6 +413,9 @@ class GlobalEnv(Env):
         else:
             raise TypeError("wrong content for GlobalEnv: %s" % repr(env))
 
+        # also add the python plugins
+        self['_Python'] = PythonPlugins()
+
     def eval(self, x):
         return lisp_eval(x, self)
 
@@ -400,3 +424,4 @@ class GlobalEnv(Env):
         for expr in parse(string):
             res = self.eval(expr)
         return res
+

@@ -6,17 +6,21 @@
 
 # syntax: ${<the var name>-<default value>}
 export test_option=${1}
-#export test_command="python3 sym_lis.py --test $test_option"
+export test_watch_more=${2-""}
+
+export watch_files="sym_lis.py tests/test*.py $test_watch_more"
+
 export test_command="pytest $test_option"
 
 export PYTHONPATH=.
 echo PYTHONPATH $PYTHONPATH
+echo watch_files   "$watch_files"
 echo test_command  "$test_command"
 
 $test_command
 echo -------   END first run  -------
 
-while inotifywait -e close_write -e move_self sym_lis.py tests/test*.py
+while inotifywait -e close_write -e move_self $watch_files
 do
   echo
   echo ------- UPDATE -------

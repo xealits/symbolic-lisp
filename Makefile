@@ -3,8 +3,9 @@
 # leave focus_file empty to run all tests
 # or pass a string with files to run
 testup: focus_file=
+testup: watch_more=
 testup:
-	./session_test.sh tests/${focus_file}
+	./session_test.sh tests/${focus_file} ${watch_more}
 
 # just to remember it
 test:
