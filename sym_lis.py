@@ -236,11 +236,15 @@ class Procedure(object):
 
 ################ eval
 
-# TODO: this per-module env will not be needed, then remove it?
-global_env = standard_env()
+def lisp_eval(x, env=None):
+    """Evaluate an expression in an environment.
 
-def lisp_eval(x, env=global_env):
-    "Evaluate an expression in an environment."
+    If no environment is given, evaluate in a blank environment.
+    """
+
+    if env is None:
+        env = standard_env()
+
     if isinstance(x, Symbol):      # variable reference
         # quote symbols
         if len(x) > 1 and x[0] == "'":

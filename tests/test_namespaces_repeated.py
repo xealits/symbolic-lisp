@@ -1,18 +1,15 @@
 import pytest
-from sym_lis import lisp_eval_str, Env
+from sym_lis import GlobalEnv, Env
 
 
 @pytest.fixture
-def redefine_foo():
-    foo_env = lisp_eval_str("(define foo (env (quote (foo 5)) (quote (3 7))))")
-    #bar_env = lisp_eval_str("(define foo/bar (env))")
-    #boo_var = lisp_eval_str("(define foo/foo/mpt/boo 600)")
-    return foo_env #, bar_env, boo_var
+def define_foo():
+    g = GlobalEnv()
+    g.eval_str("(define foo (env (quote (foo 5)) (quote (3 7))))")
+    return g
 
+def test_foo(define_foo):
+    assert isinstance(define_foo.eval_str('foo'), Env)
 
-def test_foo(redefine_foo):
-    assert isinstance(lisp_eval_str('foo'), Env)
-
-
-def test_foofoo(redefine_foo):
-    assert lisp_eval_str('foo/foo') == 5
+def test_foofoo(define_foo):
+    assert define_foo.eval_str('foo/foo') == 5

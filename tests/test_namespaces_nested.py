@@ -1,26 +1,5 @@
-'''
-add_tests([
-"(env (quote ('foo 5)) (quote (3 7)))",
-"(define foo (env (quote ('foo 5)) (quote (3 7))))",
-"foo",
-"/foo",
-"/./foo",
-"./foo",
-"././foo",
-"(define foo/bar/baz 55)",
-"foo",
-"(foo 'bar)",
-"(foo 'brr 51)",
-"foo/bar",
-"foo/bar/",
-"((foo 'bar) 'baz)",
-"foo/bar/baz",
-"(+ foo/bar/baz 33)",
-], 'tests_namespaces_nested')
-'''
-
 import pytest
-from sym_lis import lisp_eval_str, Env, GlobalEnv
+from sym_lis import Env, GlobalEnv
 
 
 @pytest.fixture
