@@ -1,4 +1,5 @@
 import subprocess
+from sym_lis import GlobalEnv
 
 def test_repl_session():
     comlist = ['./sym_repl.py']
@@ -27,3 +28,28 @@ def test_repl_session_debug():
     assert res.returncode == 0
     assert b'8\n' in res.stdout
     assert b'DEBUG' in res.stderr
+
+def test_repl_script_lisp():
+    g = GlobalEnv()
+    assert g.eval_str('') is None
+
+SCRIPT = '''
+(+ 1 2)
+(stdout 'foo 'bar)
+(+ ( * 5 44) 2)
+'''
+
+def test_repl_script(tmp_path):
+    p = tmp_path / 'test_script.lisp'
+    p.write_text(SCRIPT)
+    assert p.read_text() == SCRIPT
+    assert len(list(tmp_path.iterdir())) == 1
+
+    comlist = ['./sym_repl.py', '--script', p]
+    script = b''
+    res = subprocess.run(comlist, input=script,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    assert res.returncode == 0
+    assert b'foo bar\n222\n'   in res.stdout
+    assert b'' == res.stderr

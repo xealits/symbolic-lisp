@@ -4,6 +4,7 @@ import argparse
 import logging
 #import readline # it blocks rlwrap
 from textwrap import dedent
+from os.path import isfile
 
 from sym_lis import lisp_eval_str, parse, List, lispstr
 
@@ -46,6 +47,7 @@ if __name__ == '__main__':
         rlwrap ./sym_repl.py""")
         )
 
+    parser.add_argument("--script", type=str, help="execute a script file")
     parser.add_argument("--debug",  action='store_true', help="DEBUG level of logging")
 
     args = parser.parse_args()
@@ -55,5 +57,18 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
 
-    repl()
+    if args.script:
+        assert isfile(args.script)
+
+        with open(args.script) as f:
+            script = f.read()
+            if not script.strip():
+                logging.warning("the script file is empty: %s" % args.script)
+
+            val = lisp_eval_str(script)
+            if val is not None:
+                print(lispstr(val))
+
+    else:
+        repl()
 

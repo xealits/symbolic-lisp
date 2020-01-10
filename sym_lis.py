@@ -117,6 +117,7 @@ def standard_env():
         'in?':     lambda nsp, y: y in nsp,
         'get':     lambda nsp, x: nsp(x),
         'get_default':     lambda nsp, x, d: nsp(x, default=d),
+        'stdout': lambda *x: print(*x),
     })
     return env
 

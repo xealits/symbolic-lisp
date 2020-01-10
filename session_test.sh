@@ -8,7 +8,7 @@
 export test_option=${1}
 export test_watch_more=${2-""}
 
-export watch_files="sym_lis.py tests/test*.py $test_watch_more"
+export watch_files="sym_lis.py sym_repl.py tests/test*.py $test_watch_more"
 
 export test_command="pytest $test_option"
 
