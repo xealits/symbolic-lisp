@@ -6,7 +6,7 @@ from __future__ import division
 import math
 import operator as op
 
-from collections import OrderedDict
+from collections import OrderedDict, UserString
 
 import importlib
 import re
@@ -17,8 +17,24 @@ import traceback
 
 ################ Types
 
-Symbol = str          # A Lisp Symbol is implemented as a Python str
-List   = list         # A Lisp List is implemented as a Python list
+class List(list):
+    """A Lisp List is implemented as a Python list"""
+
+    pass
+
+re_repetitions = re.compile(r"(/)\1{1,}", re.DOTALL)
+class Symbol(UserString):
+
+    def no_repeated_slashes(self):
+        self.data = re_repetitions.sub(r"\1", self.data)
+
+    def split(self, char):
+        # just convert the output to Symbols again
+        return [Symbol(s) for s in self.data.split(char)]
+
+class Int(int):
+    pass
+
 #Number = (int, float) # A Lisp Number is implemented as a Python int or float
 
 ################ Parsing: parse, tokenize, and read_from_tokens
@@ -50,7 +66,10 @@ def read_all_from_tokens(tokens):
     return all_expr
 
 def read_from_tokens(tokens, nesting=0):
-    "Read one expression from a sequence of tokens."
+    """Read one expression from a sequence of tokens.
+
+    An expression is either a List or an atom."""
+
     token = tokens.pop(0)
     # parse one nesting
     if '(' == token:
@@ -72,7 +91,7 @@ def read_from_tokens(tokens, nesting=0):
 
 def atom(token):
     "Numbers become numbers; every other token is a symbol."
-    try: return int(token)
+    try: return Int(token)
     except ValueError:
         try: return float(token)
         except ValueError:
@@ -80,8 +99,16 @@ def atom(token):
 
 ################ Environments
 
+def _note(note, obj):
+    obj.note = note
+    return obj
+
 def standard_env():
-    "An environment with some Scheme standard procedures."
+    """An environment with some standard functional procedures.
+
+    These procedures do not have the access to the dynamical environment of
+    eval."""
+
     env = Env()
     #env.update(vars(math)) # sin, cos, sqrt, pi, ...
     env.update({
@@ -118,16 +145,30 @@ def standard_env():
         'get':     lambda nsp, x: nsp(x),
         'get_default':     lambda nsp, x, d: nsp(x, default=d),
         'stdout': lambda *x: print(*x),
+        '_note':  _note,
+        'obj':   lambda x: x.note if 'note' in dir(x) else None,
     })
     return env
 
-re_repetitions = re.compile(r"(/)\1{1,}", re.DOTALL)
-def no_repeated_slashes(string):
-    return re_repetitions.sub(r"\1", string)
+#re_repetitions = re.compile(r"(/)\1{1,}", re.DOTALL)
+#def no_repeated_slashes(string):
+#    assert isinstance(string, Symbol)
+#    string.data = re_repetitions.sub(r"\1", string.data)
+#    return string
+#    ## re does not work on UserString-s
+#    #s = str(string)
+#    #s = re_repetitions.sub(r"\1", s)
+#    #out = Symbol(s)
+#    ## propagate the note
+#    #if 'note' in dir(string):
+#    #out.note = string.nore
+#    #return Symbol
 
 def standard_name_path_list(name_path):
     # a variable name
-    name_path = no_repeated_slashes(name_path)
+    assert isinstance(name_path, Symbol)
+
+    name_path.no_repeated_slashes()
     if name_path[-1] == '/':
         name_path = name_path[:-1]
     return name_path.split('/')
@@ -339,7 +380,7 @@ def lisp_eval(x, env=None):
         filenames = [lisp_eval(exp, env) for exp in x[1:]]
         results = []
         for fname in filenames:
-            with open(fname) as f:
+            with open(fname.data) as f:
                 file_program = f.read()
                 res = lisp_eval_str(file_program, env)
                 results.append(res)
@@ -382,11 +423,13 @@ class PythonPlugins(Env):
         self['get'] = self.get
 
     def imp(self, modname):
-        self[modname] = importlib.import_module(modname)
+        assert isinstance(modname, Symbol)
+        self[modname] = importlib.import_module(modname.data)
 
     def get(self, objpath):
         # DANGER: is there is a safer way to do it?
-        return eval(objpath, globals(), self)
+        assert isinstance(objpath, Symbol)
+        return eval(objpath.data, globals(), self)
 
 
 class GlobalEnv(Env):

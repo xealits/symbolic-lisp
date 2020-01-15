@@ -8,6 +8,8 @@ testup:
 	./session_test.sh tests/${focus_file} ${watch_more}
 
 # just to remember it
+# fish:
+# env PYTHONPATH=. pytest
 test:
 	PYTHONPATH=. pytest
 
