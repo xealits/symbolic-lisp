@@ -53,3 +53,18 @@ def test_repl_script(tmp_path):
     assert res.returncode == 0
     assert b'foo bar\n222\n'   in res.stdout
     assert b'' == res.stderr
+
+BLANK_SCRIPT = '    \n   '
+
+def test_repl_script_empty(tmp_path):
+    p = tmp_path / 'test_script.lisp'
+    p.write_text(BLANK_SCRIPT)
+
+    comlist = ['./sym_repl.py', '--script', p]
+    script = b''
+    res = subprocess.run(comlist, input=script,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    assert res.returncode == 0
+    assert b'' == res.stdout
+    assert b'WARNING' in res.stderr and b'empty' in res.stderr
