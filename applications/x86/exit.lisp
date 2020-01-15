@@ -1,15 +1,13 @@
+(source 'x86.lisp)
 
 (.data)
-(.ascii "Hello, world\\0")
+(.ascii '"Hello,_world\0")
 
 (.text)
-(format t ".globl _start~%")
+(.globl '_start)
 
-(label "_start")
+(label '_start)
 
-;(movl "$12" (ebx))    ; exit code
-;(movl "$1"  (eax))    ; linux syscall code, 1 = exit
-;(interrupt_to KERNEL) ; interrupt, call kernel
-
-(exit_to_kernel "$12")
-
+(movl '$12 ebx)
+(movl '$1  eax)
+(interrupt_to KERNEL)

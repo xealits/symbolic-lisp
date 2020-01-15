@@ -5,8 +5,12 @@
 
 all: global_variable2.out global_variable.out exit.out qexit.out max.out
 
+#./sym_repl.py --script applications/x86/exit_test.lisp
+
 %.s: %.lisp x86.lisp
-	cat x86.lisp $< | sbcl --script > $@
+	#cat x86.lisp $< | sbcl --script > $@
+	#cat x86.lisp $< | ../../sym_repl.py --script > $@
+	../../sym_repl.py --script $< > $@
 
 %.o: %.s
 	as $< -o $@

@@ -6,7 +6,7 @@ import logging
 from textwrap import dedent
 from os.path import isfile
 
-from sym_lis import lisp_eval_str, parse, List, lispstr
+from sym_lis import GlobalEnv, parse, List, lispstr
 
 
 def handy_input(prompt='> '):
@@ -29,11 +29,12 @@ def handy_input(prompt='> '):
 
 def repl(prompt='sym_repl> '):
     "A prompt-read-eval-print loop."
+    g = GlobalEnv()
     while True:
         input_program = handy_input(prompt)
         if not input_program.strip(): continue
 
-        val = lisp_eval_str(input_program)
+        val = g.eval_str(input_program)
         if val is not None: 
             print(lispstr(val))
 
@@ -60,12 +61,13 @@ if __name__ == '__main__':
     if args.script:
         assert isfile(args.script)
 
+        g = GlobalEnv()
         with open(args.script) as f:
             script = f.read()
             if not script.strip():
                 logging.warning("the script file is empty: %s" % args.script)
 
-            val = lisp_eval_str(script)
+            val = g.eval_str(script)
             if val is not None:
                 print(lispstr(val))
 
