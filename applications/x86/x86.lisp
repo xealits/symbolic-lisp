@@ -35,8 +35,19 @@
 
 
 (define address1 (lambda (addr_label reg_index offset)
-	(join addr_label par_l ', reg_index ', offset par_r)
+	(join str_empty (list addr_label par_l ', reg_index ', offset par_r))
 ))
+
+(quote(
+	;(define address_byte (lambda (addr_label reg_index offset)))
+))
+
+(define address_byte  (lambda (init_address relative_offset)
+	(join str_empty (list par_l init_address '+ relative_offset par_r))
+	))
+(define address_word  (lambda (init_address relative_offset) (address_byte init_address (* 2 relative_offset))) )
+(define address_dword (lambda (init_address relative_offset) (address_byte init_address (* 4 relative_offset))) )
+(define address_qword (lambda (init_address relative_offset) (address_byte init_address (* 8 relative_offset))) )
 
 (quote ( registers ))
 
@@ -45,6 +56,18 @@
 (define esp '%esp)
 (define ebp '%ebp)
 (define edi '%edi)
+
+(quote (
+	;language
+	; (global_variable '.byte 'variable (list 111 222 333))
+	))
+
+(define global_variable (lambda (type varname data)
+	(begin (stdout (+ varname ':)) (stdout type (join ', data)))
+	))
+(quote(
+	; FIXME: type must be passed as a function and run it
+	))
 
 (quote ( linux ))
 

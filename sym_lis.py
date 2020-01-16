@@ -149,7 +149,8 @@ def standard_env():
         'obj':   lambda x: x.note if 'note' in dir(x) else None,
         'par_l':  '(',
         'par_r':  ')',
-        'join':   lambda *x: ''.join(str(i) for i in x),
+        'str_empty':  '',
+        'join':   lambda separator, l: separator.join(str(i) for i in l),
     })
     return env
 
