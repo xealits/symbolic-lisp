@@ -147,22 +147,11 @@ def standard_env():
         'stdout': lambda *x: print(*x),
         '_note':  _note,
         'obj':   lambda x: x.note if 'note' in dir(x) else None,
+        'par_l':  '(',
+        'par_r':  ')',
+        'join':   lambda *x: ''.join(str(i) for i in x),
     })
     return env
-
-#re_repetitions = re.compile(r"(/)\1{1,}", re.DOTALL)
-#def no_repeated_slashes(string):
-#    assert isinstance(string, Symbol)
-#    string.data = re_repetitions.sub(r"\1", string.data)
-#    return string
-#    ## re does not work on UserString-s
-#    #s = str(string)
-#    #s = re_repetitions.sub(r"\1", s)
-#    #out = Symbol(s)
-#    ## propagate the note
-#    #if 'note' in dir(string):
-#    #out.note = string.nore
-#    #return Symbol
 
 def standard_name_path_list(name_path):
     # a variable name

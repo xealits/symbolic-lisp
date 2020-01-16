@@ -12,6 +12,7 @@
 (define label  (lambda (name) (stdout (+ name ':))))
 
 (define .ascii (lambda (text) (stdout '.ascii text)))
+(define .long  (lambda (text) (stdout '.long  text)))
 
 
 (quote (the instructions))
@@ -32,8 +33,10 @@
 
 (define ret (lambda () (stdout 'ret)))
 
-(define interrupt_to (lambda (code) (one_operand_instruction 'int code)))
 
+(define address1 (lambda (addr_label reg_index offset)
+	(join addr_label par_l ', reg_index ', offset par_r)
+))
 
 (quote ( registers ))
 
@@ -44,4 +47,10 @@
 (define edi '%edi)
 
 (quote ( linux ))
+
 (define KERNEL '$0x80)
+
+(define interrupt_to (lambda (code) (one_operand_instruction 'int code)))
+(define exit_to_kernel (lambda (exit_code)
+	(begin (movl exit_code ebx) (movl '$1 eax) (interrupt_to KERNEL))
+))
