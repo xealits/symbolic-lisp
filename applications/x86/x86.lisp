@@ -4,10 +4,12 @@
 	))
 
 (define .section (lambda (name) (stdout '.section name)))
+(define .rodata  (lambda () (.section  '.rodata)))
 (define .data    (lambda () (.section  '.data)))
 (define .text    (lambda () (.section  '.text)))
 
-(define .globl (lambda (name) (stdout '.globl name)))
+(define .globl  (lambda (name) (stdout '.globl  name)))
+(define .global (lambda (name) (stdout '.global name)))
 
 (define label  (lambda (name) (stdout (+ name ':))))
 
@@ -21,6 +23,7 @@
 (define two_operand_instruction (lambda (name x y) (stdout name x ', y)))
 
 (define movl  (lambda (x y) (two_operand_instruction 'movl x y)))
+(define mov   (lambda (x y) (two_operand_instruction 'mov  x y)))
 (define cmpl  (lambda (x y) (two_operand_instruction 'cmpl x y)))
 (define popq  (lambda (x)   (one_operand_instruction 'popq x)))
 (define pushq (lambda (x)   (one_operand_instruction 'push x)))
@@ -31,7 +34,8 @@
 (define jmp   (lambda (x)   (one_operand_instruction 'jmp  x)))
 (define incl  (lambda (x)   (one_operand_instruction 'incl x)))
 
-(define ret (lambda () (stdout 'ret)))
+(define ret     (lambda () (stdout 'ret)))
+(define syscall (lambda () (stdout 'syscall)))
 
 
 (define address1 (lambda (addr_label reg_index offset)
@@ -51,25 +55,44 @@
 
 (quote ( registers ))
 
-(define ebx '%ebx)
 (define eax '%eax)
+(define ebx '%ebx)
+(define ecx '%ecx)
+(define edx '%edx)
+(define esx '%esx)
+
+(define rax '%rax)
+(define rdx '%rdx)
+
 (define esp '%esp)
 (define ebp '%ebp)
 (define edi '%edi)
+
+(define rsp '%rsp)
+(define rbp '%rbp)
+
+(define rdi '%rdi)
+(define rsi '%rsi)
 
 (quote (
 	;language
 	; (global_variable '.byte 'variable (list 111 222 333))
 	))
 
-(define global_variable (lambda (type varname data)
-	(begin (stdout (+ varname ':)) (stdout type (join ', data)))
+(define static_variable (lambda (type varname data)
+	(begin
+		(stdout (+ varname ':))
+		(stdout type (if (list? data) (join ', data) data)))
 	))
 (quote(
 	; FIXME: type must be passed as a function and run it
 	))
 
 (quote ( linux ))
+
+(quote ( order of arguments in syscalls
+	%eax	Name	    Source 	            %ebx	        %ecx	        %edx	%esx	%edi
+	))
 
 (define KERNEL '$0x80)
 

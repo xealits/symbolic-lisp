@@ -1,6 +1,7 @@
 (source 'x86.lisp)
 
-(global_variable '.byte 'variable (list 111 222 333))
+(.data)
+(static_variable '.byte 'variable (list 111 222 333))
 
 (.text)
 (.globl '_start)
