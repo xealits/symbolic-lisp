@@ -74,6 +74,9 @@
 (define rdi '%rdi)
 (define rsi '%rsi)
 
+(define call (lambda (symbolname) (stdout 'call symbolname)))
+
+
 (quote (
 	;language
 	; (global_variable '.byte 'variable (list 111 222 333))

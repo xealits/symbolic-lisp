@@ -1,0 +1,6 @@
+
+make hello_world_text.o
+make hello_world_data.o
+
+ld hello_world_text.o hello_world_data.o -o hello_world_mixed.out
+
