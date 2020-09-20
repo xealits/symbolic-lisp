@@ -32,6 +32,9 @@ class Symbol(UserString):
         # just convert the output to Symbols again
         return [Symbol(s) for s in self.data.split(char)]
 
+class String(UserString):
+    pass
+
 class Int(int):
     pass
 
@@ -43,9 +46,26 @@ def parse(program):
     "Read a Scheme expression from a string."
     return read_all_from_tokens(tokenize(program))
 
+# the reg for the "-quoted strings
+string_pattern = re.compile(r'\"([^"]+?)\"')
 def tokenize(s):
-    "Convert a string into a list of tokens."
-    return s.replace('(',' ( ').replace(')',' ) ').split()
+    '''Convert a string into a list of tokens.
+
+    an example:
+    >>> tokenize('foo (a   b "bar (baz d)" z "seven (7 two)" ab (foo jaz ))')
+    ['foo' '(' 'a' 'b' "bar (baz d)" 'z' "seven (7 two)" 'ab' '(' 'foo' 'jaz' ')' ')']
+    '''
+    # tokenize the text between the strings
+    tokens = []
+    prev_char = 0
+    for m in string_pattern.finditer(s):
+        mstart, mend = m.span()
+        prev_toks = s[prev_char: mstart].replace('(',' ( ').replace(')',' ) ').split()
+        tokens.extend(prev_toks + [String(m.group()[1:-1])])
+        prev_char = mend
+    # the last chunk of the input string
+    tokens += s[prev_char:].replace('(',' ( ').replace(')',' ) ').split()
+    return tokens
 
 def lispstr(exp):
     "Convert a Python object back into a Lisp-readable string."
