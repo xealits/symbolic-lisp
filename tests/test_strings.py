@@ -7,6 +7,12 @@ def test_foo():
     var_foo_addr = g.eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
     assert g.eval_str('foo') is var_foo_addr
 
+def test_quotes():
+    g = GlobalEnv()
+    a_string = 'foo bar (bax c d) and ( more a b) brr t'
+    g.eval_str('(define foo "%s")' % a_string)
+    assert g.eval_str('foo') == a_string
+
 def test_print_parentheses():
     g = GlobalEnv()
     assert g.eval_str("(+ par_l (+ 'foo par_r))") == '(foo)'

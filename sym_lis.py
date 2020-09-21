@@ -61,7 +61,7 @@ def tokenize(s):
     for m in string_pattern.finditer(s):
         mstart, mend = m.span()
         prev_toks = s[prev_char: mstart].replace('(',' ( ').replace(')',' ) ').split()
-        tokens.extend(prev_toks + [String(m.group()[1:-1])])
+        tokens.extend(prev_toks + [String(m.group()[1:-1])]) # tokens and String
         prev_char = mend
     # the last chunk of the input string
     tokens += s[prev_char:].replace('(',' ( ').replace(')',' ) ').split()
@@ -111,6 +111,8 @@ def read_from_tokens(tokens, nesting=0):
 
 def atom(token):
     "Numbers become numbers; every other token is a symbol."
+    if isinstance(token, String):
+        return token
     try: return Int(token)
     except ValueError:
         try: return float(token)
