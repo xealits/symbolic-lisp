@@ -7,11 +7,14 @@ def test_foo():
     var_foo_addr = g.eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
     assert g.eval_str('foo') is var_foo_addr
 
-def test_quotes():
+@pytest.mark.parametrize('var_name, val', [
+  ("foo", 'foo bar (bax c d) and ( more a b) brr t'),
+  ("bar", "foo (bar baz)"),
+])
+def test_quotes(var_name, val):
     g = GlobalEnv()
-    a_string = 'foo bar (bax c d) and ( more a b) brr t'
-    g.eval_str('(define foo "%s")' % a_string)
-    assert g.eval_str('foo') == a_string
+    g.eval_str('(define %s "%s")' % (var_name, val))
+    assert g.eval_str(var_name) == val
 
 def test_print_parentheses():
     g = GlobalEnv()
