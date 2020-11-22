@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# this is Linux version
-# it depends on pytest and inotifywait
+# this is Mac version
+# it depends on pytest and fswatch
 
 #echo $@
 #echo $0
@@ -23,7 +23,9 @@ echo test_command  "$test_command"
 $test_command
 echo -------   END first run  -------
 
-while inotifywait -e close_write -e move_self $watch_files
+fswatch $watch_files | while read changed_file
+# I do not use the changed file
+# because I run all tests anyway
 do
   echo
   echo ------- UPDATE -------
