@@ -70,6 +70,19 @@ def test_dyn_scope():
             )))))''')
     assert g.eval_str('(sum_wrapper)') == 36
 
+    g.eval_str('''(define 'sum_dyn2
+            (nsp (quote ("_proc")) (quote ((
+              (+ (get . "foo") (get . "bar"))
+            )))))''')
+    g.eval_str('''(define 'sum_wrapper2
+            (nsp (quote ("_proc")) (quote ((
+              (define 'foo 30)
+              (define 'bar 6)
+              (print _dyn)
+              (sum_dyn2)
+            )))))''')
+    assert g.eval_str('(sum_wrapper2)') == 3
+
 
 def test_basic_func():
     g = Env()

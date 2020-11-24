@@ -125,10 +125,12 @@ def lisp_eval2(x, nsp={}):
     if nsp is None:
         nsp = {}
 
-    if isinstance(x, Symbol):        # variable reference
-        if x[0] == "'": return x[1:] # quoted variable
+    if isinstance(x, Symbol):          # name reference
+        if x == '.': return nsp        # current namespace
+        elif x[0] == "'": return x[1:] # quoted name
         else:
             return nsp.find(x)[x]
+
     elif not isinstance(x, List):  # constant literal
         return x                
 
@@ -173,6 +175,7 @@ def lisp_eval2(x, nsp={}):
     elif x[0] == 'eval':
         r = lisp_eval2(x[1], nsp)
         return r
+
     elif x[0] == 'quote':
         return x[1]
 
