@@ -22,12 +22,12 @@ def test_defines():
     g.eval_str('(define "bar" 5)')
     assert g.eval_str('bar') == 5
 
-    g.eval_str('(define "baz" (nsp ("a") ("b")))')
+    g.eval_str('(define "baz" (nsp (quote ("a")) (quote ("b"))))')
     assert g.eval_str('baz') == {'a': 'b'}
 
 def test_procedure():
     g = Env()
-    g.eval_str('(define "echo" (nsp ("_proc") (((eval _args)))))')
+    g.eval_str('(define "echo" (nsp (quote ("_proc")) (quote (((eval _args))))))')
     assert g.eval_str('(echo foo bar)') == ['foo', 'bar']
 
 def test_integer_arithmetics():
@@ -40,34 +40,34 @@ def test_integer_arithmetics():
 def test_dyn_scope():
     g = Env()
     g.eval_str('''(define "sum_typ"
-            (nsp ("_proc") ((
+            (nsp (quote ("_proc")) (quote ((
               (print _args)
               (print (type _args))
               (+ (0 _args) (1 _args))
-            ))))''')
+            )))))''')
     assert g.eval_str('(sum_typ 1 2)') == 3
     assert g.eval_str('(sum_typ 33 (sum_typ 1 2))') == 36
 
     g.eval_str('''(define "sum_lex"
-            (nsp ("_proc") ((
+            (nsp (quote ("_proc")) (quote ((
               (+ foo bar)
-            ))))''')
+            )))))''')
     g.eval_str("(define 'foo 1)")
     g.eval_str("(define 'bar 2)")
     assert g.eval_str('(sum_lex)') == 3
 
     g.eval_str('''(define 'sum_dyn
-            (nsp ("_proc") ((
+            (nsp (quote ("_proc")) (quote ((
               (print _dyn)
               (+ (get _dyn "foo") (get _dyn "bar"))
-            ))))''')
+            )))))''')
     g.eval_str('''(define 'sum_wrapper
-            (nsp ("_proc") ((
+            (nsp (quote ("_proc")) (quote ((
               (define 'foo 30)
               (define 'bar 6)
               (print _dyn)
               (sum_dyn)
-            ))))''')
+            )))))''')
     assert g.eval_str('(sum_wrapper)') == 36
 
 

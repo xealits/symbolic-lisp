@@ -157,8 +157,9 @@ def lisp_eval2(x, nsp={}):
         var_name = lisp_eval2(var_exp, nsp)
         nsp[var_name] = lisp_eval2(exp, nsp)
     elif x[0] == 'set!':           # (set! var exp)
-        (_, var, exp) = x
-        nsp.find(var)[var] = lisp_eval2(exp, nsp)
+        (_, var_exp, exp) = x
+        var_name = lisp_eval2(var_exp, nsp)
+        nsp.find(var_name)[var_name] = lisp_eval2(exp, nsp)
     elif x[0] == 'get':            # (get nsp varname_exp)
         nsp, var = lisp_eval2(x[1], nsp), lisp_eval2(x[2], nsp)
         return nsp.find(var)[var]
@@ -166,6 +167,7 @@ def lisp_eval2(x, nsp={}):
     # preparation for meta-call
     elif x[0] == 'nsp':
         (_, names, values) = x
+        names, values = lisp_eval2(names, nsp), lisp_eval2(values, nsp)
         return Namespace(names, values, nsp)
 
     elif x[0] == 'eval':
@@ -178,15 +180,27 @@ def lisp_eval2(x, nsp={}):
     else:
         symb = lisp_eval2(x[0], nsp)
         args = x[1:]
+
         if isinstance(symb, Namespace):
             assert '_proc' in symb # caustom procedure
+            '''
+            _proc is a [list] of calls
+            it is evaluated sequencially
+            in a Namespace derived from lexical nsp of symb
+            with 2 dynamic definitions:
+              _args, which are not pre-evaled
+              _dyn, which points to the current, dynamic nsp
+            '''
             proc = symb['_proc']
             call_nsp = Namespace(('_args', '_dyn'), (args, nsp), symb)
+
             r = None
             for p in proc:
                 r = lisp_eval2(p, call_nsp)
             return r
-        elif callable(symb): # Python procedure
+
+        # calls to Python extensions
+        elif callable(symb):
             args = [lisp_eval2(exp, nsp) for exp in args]
             return symb(*args)
 
