@@ -116,7 +116,7 @@ class Namespace(dict):
         "Find the innermost Namespace where var appears."
         return self if (var in self) else self.outer.find(var)
 
-def lisp_eval2(x, nsp={}):
+def lisp_eval2(x, nsp=None):
     """Evaluate an expression in a namespace.
 
     If no namespace is given, evaluate in a blank namespace.
