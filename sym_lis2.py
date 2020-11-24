@@ -125,8 +125,10 @@ def lisp_eval2(x, nsp={}):
     if nsp is None:
         nsp = {}
 
-    if isinstance(x, Symbol):      # variable reference
-        return nsp.find(x)[x]
+    if isinstance(x, Symbol):        # variable reference
+        if x[0] == "'": return x[1:] # quoted variable
+        else:
+            return nsp.find(x)[x]
     elif not isinstance(x, List):  # constant literal
         return x                
 
@@ -151,8 +153,9 @@ def lisp_eval2(x, nsp={}):
 
     # setting names in current namespace
     elif x[0] == 'define':         # (define var exp)
-        (_, var, exp) = x
-        nsp[var] = lisp_eval2(exp, nsp)
+        (_, var_exp, exp) = x
+        var_name = lisp_eval2(var_exp, nsp)
+        nsp[var_name] = lisp_eval2(exp, nsp)
     elif x[0] == 'set!':           # (set! var exp)
         (_, var, exp) = x
         nsp.find(var)[var] = lisp_eval2(exp, nsp)
