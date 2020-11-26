@@ -129,7 +129,8 @@ def lisp_eval2(x, nsp=None):
         if x == '.': return nsp        # current namespace
         elif x[0] == "'": return x[1:] # quoted name
         else:
-            return nsp.find(x)[x]
+            found_nsp = nsp.find(x)
+            return found_nsp [x]
 
     elif not isinstance(x, List):  # constant literal
         return x                
@@ -155,9 +156,20 @@ def lisp_eval2(x, nsp=None):
 
     # setting names in current namespace
     elif x[0] == 'define':         # (define var exp)
-        (_, var_exp, exp) = x
-        var_name = lisp_eval2(var_exp, nsp)
-        nsp[var_name] = lisp_eval2(exp, nsp)
+        if len(x) == 3:
+           (_, var_exp, exp) = x
+           in_nsp = nsp
+        elif len(x) == 4:
+           (_, var_exp, exp, in_nsp) = x
+           in_nsp = lisp_eval2(in_nsp, nsp)
+
+        # eval here
+        var_name = lisp_eval2(var_exp, nsp) 
+        var_val  = lisp_eval2(exp, nsp)
+        # define, optionally, in another namespace
+        print('define:', var_name, var_val)
+        in_nsp[var_name] = var_val
+
     elif x[0] == 'set!':           # (set! var exp)
         (_, var_exp, exp) = x
         var_name = lisp_eval2(var_exp, nsp)
@@ -173,11 +185,18 @@ def lisp_eval2(x, nsp=None):
         return Namespace(names, values, nsp)
 
     elif x[0] == 'eval':
-        r = lisp_eval2(x[1], nsp)
+        assert 1 < len(x) < 4
+        in_namespace = lisp_eval2(x[2], nsp) if len(x) == 3 else nsp
+        r = lisp_eval2(x[1], in_namespace)
+        print(f'eval {x[1]} = {r}')
         return r
 
     elif x[0] == 'quote':
         return x[1]
+
+    elif x[0] == 'list':
+        args = [lisp_eval2(a, nsp) for a in x[1:]]
+        return args
 
     # and my procedure call protocol
     else:
@@ -198,7 +217,7 @@ def lisp_eval2(x, nsp=None):
             call_nsp = Namespace(('_args', '_dyn'), (args, nsp), symb)
 
             r = None
-            for p in proc:
+            for p in proc: # TODO: this is a fixed control flow - must be programmable
                 r = lisp_eval2(p, call_nsp)
             return r
 
@@ -206,6 +225,12 @@ def lisp_eval2(x, nsp=None):
         elif callable(symb):
             args = [lisp_eval2(exp, nsp) for exp in args]
             return symb(*args)
+
+        else:
+            # TODO temporary work-around, figure out if this is indeed a special case
+            # lookup-eval
+            return lisp_eval2(symb, nsp)
+            raise ValueError(f'unknown custom call {symb} from {x}')
 
 '''
 so a normal function will have to
@@ -220,6 +245,7 @@ def standard_nsp():
     nsp.update({
         '+': op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
         '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
+        'sum': sum,
         'equal?':  op.eq, 
         'length':  len, 
         'print':  print,
