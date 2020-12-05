@@ -203,8 +203,9 @@ def test_basic_func():
     g.eval_str('''(define 'func (nsp
     (quote ("_proc"))
     (quote ((
-        (print _args)
-        (define 'name      (0 _args))
+        (print "_args" _args)
+        (print "_dyn"  _dyn)
+        (define 'name      (0 _args) _dyn)
         (define 'arguments (1 _args))
         (define 'body      (2 _args))
         (print _args ":" name arguments)
@@ -220,7 +221,7 @@ def test_basic_func():
          ) _dyn)
     )))))''')
 
-    g.eval_str('''(func "foo" (quote (x y)) (quote (+ x y)))''')
+    g.eval_str('''(func "foo" (x y) (+ x y))''')
     assert g.eval_str('(foo 1 2)') == 3
 
 '''

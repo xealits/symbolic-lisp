@@ -292,7 +292,7 @@ class GlobalEnv(Namespace):
         # populate it with defaults
         if env is None:
             self.update(standard_nsp())
-        elif isinstance(env, Env):
+        elif isinstance(env, Namespace):
             self.update(env)
         else:
             raise TypeError("wrong content for GlobalEnv: %s" % repr(env))
