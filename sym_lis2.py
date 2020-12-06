@@ -261,7 +261,7 @@ so a normal function will have to
         return r
 '''
 
-def proc_eval(expr, in_nsp_exp, _dyn=None):
+def proc_eval(in_nsp_exp, expr, _dyn=None):
     in_namespace = lisp_eval2(in_nsp_exp, _dyn)
     r = lisp_eval2(expr, in_namespace)
     print(f'eval in_namespace {in_nsp_exp} = {in_namespace}')
@@ -290,6 +290,21 @@ def proc_define(var_exp, exp, in_nsp=None, _dyn=None):
 proc_define_nsp = Namespace()
 proc_define_nsp['_callable'] = proc_define
 
+def proc_map(expr, list_expr, _dyn=None):
+    print(f'map _dyn = {_dyn}')
+    l = lisp_eval2(list_expr, _dyn)
+    assert isinstance(l, List)
+
+    #
+    if isinstance(expr, Symbol): expr = [expr]
+    r = [lisp_eval2(expr + [arg], _dyn) for arg in l]
+
+    print(f'map {expr} on {l} = {r}')
+    return r
+
+proc_map_nsp = Namespace()
+proc_map_nsp['_callable'] = proc_map
+
 def standard_nsp():
     "An environment with some Scheme standard procedures."
     nsp = Namespace()
@@ -303,6 +318,7 @@ def standard_nsp():
         'type':  type,
         'eval':  proc_eval_nsp,
         'define': proc_define_nsp,
+        'map': proc_map_nsp,
         })
 
     """

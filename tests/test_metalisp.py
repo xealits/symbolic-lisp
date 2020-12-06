@@ -135,8 +135,8 @@ def test_remote_define():
     g.eval_str('''(define 'bar 111)''')
 
     assert g.eval_str('foo') == {'bar': 5}
-    assert g.eval_str('(eval bar .)')   == 111
-    assert g.eval_str('(eval bar foo)') == 5
+    assert g.eval_str('(eval .   bar)')   == 111
+    assert g.eval_str('(eval foo bar)') == 5
 
 def test_semibuild_list():
     g = Env()
@@ -182,6 +182,12 @@ def test_quote_eval():
     print(g.eval_str('nome'))
     assert g.eval_str('nome') == {'foo': 2, 'bar': 3}
 
+def test_map_eval():
+    g = Env()
+    r = g.eval_str('(map (eval .) (quote (1 (+ 1 10) (* 2 (1 (list 0 5 10))))))')
+    print(r)
+    assert r == [1, 11, 10]
+
 '''
 What if make
  foo  = "foo"
@@ -222,9 +228,10 @@ def test_basic_func():
         (define name (nsp
             (list "_proc")
             (list (list
-              (list 'define ''nsp_parsed_args
-                    (list 'nsp (list 'quote arguments) '_args))
-              (list 'eval body 'nsp_parsed_args)
+              (list 'define ''nsp_matched_args
+                    (list 'nsp (list 'quote arguments) (quote (map (eval .) _args))))
+              (quote (print "nsp_matched_args" nsp_matched_args))
+              (list 'eval 'nsp_matched_args body)
             ))
          ) _dyn)
     )))))''')
@@ -232,6 +239,8 @@ def test_basic_func():
     g.eval_str('''(func foo (x y) (+ x y))''')
     g.eval_str("(print 'FOO foo)")
     assert g.eval_str('(foo 1 2)') == 3
+    assert g.eval_str('(foo 1 (+ 10 2))') == 13
+    assert g.eval_str('(foo (* 2 3) (foo 10 2))') == 18
 
 '''
 And eval's special forms are not exposed in the namespace!!!!
