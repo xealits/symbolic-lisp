@@ -149,10 +149,19 @@ def lisp_eval2(x, nsp=None):
         l = lisp_eval2(x[1], nsp)
         assert isinstance(l, list)
         return lisp_eval2(l[1:], nsp)
+
     elif isinstance(x[0], Int):
         l = lisp_eval2(x[1], nsp)
         assert isinstance(l, list)
-        return lisp_eval2(l[x[0]], nsp)
+        return lisp_eval2(l[x[0]], nsp) # to eval
+        #return l[x[0]]  # or not to eval
+
+    elif x[0] == 'index':
+        ind = x[1]
+        assert isinstance(ind, Int)
+        l = lisp_eval2(x[2], nsp)
+        assert isinstance(l, list)
+        return l[ind]  # or not to eval
 
     # setting names in current namespace
     elif x[0] == 'set!':           # (set! var exp)
