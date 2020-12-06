@@ -25,10 +25,12 @@ def test_defines():
     g.eval_str('(define "baz" (nsp (quote ("a")) (quote ("b"))))')
     assert g.eval_str('baz') == {'a': 'b'}
 
+'''
 def test_procedure():
     g = Env()
     g.eval_str('(define "echo" (nsp (quote ("_proc")) (quote (((eval _args))))))')
     assert g.eval_str('(echo foo bar)') == ['foo', 'bar']
+'''
 
 def test_integer_arithmetics():
     g = Env()
@@ -205,23 +207,23 @@ def test_basic_func():
     (quote ((
         (print "_args" _args)
         (print "_dyn"  _dyn)
-        (define 'name      (0 _args) _dyn)
+        (define 'name      (0 _args))
         (define 'arguments (1 _args))
         (define 'body      (2 _args))
         (print _args ":" name arguments)
 
         (define name (nsp
             (list "_proc")
-            (list 
+            (list (list
               (list 'define ''nsp_parsed_args
-                    (list 'nsp arguments '_args))
-
-              (quote (eval body nsp_parsed_args))
-            )
+                    (list 'nsp (list 'quote arguments) '_args))
+              (list 'eval body 'nsp_parsed_args)
+            ))
          ) _dyn)
     )))))''')
 
-    g.eval_str('''(func "foo" (x y) (+ x y))''')
+    g.eval_str('''(func "foo" (quote (x y)) (quote (+ x y)))''')
+    g.eval_str("(print 'FOO foo)")
     assert g.eval_str('(foo 1 2)') == 3
 
 '''

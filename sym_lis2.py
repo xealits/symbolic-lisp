@@ -155,21 +155,6 @@ def lisp_eval2(x, nsp=None):
         return lisp_eval2(l[x[0]], nsp)
 
     # setting names in current namespace
-    elif x[0] == 'define':         # (define var exp)
-        if len(x) == 3:
-           (_, var_exp, exp) = x
-           in_nsp = nsp
-        elif len(x) == 4:
-           (_, var_exp, exp, in_nsp) = x
-           in_nsp = lisp_eval2(in_nsp, nsp)
-
-        # eval here
-        var_name = lisp_eval2(var_exp, nsp) 
-        var_val  = lisp_eval2(exp, nsp)
-        # define, optionally, in another namespace
-        print('define:', var_name, var_val)
-        in_nsp[var_name] = var_val
-
     elif x[0] == 'set!':           # (set! var exp)
         (_, var_exp, exp) = x
         var_name = lisp_eval2(var_exp, nsp)
@@ -184,13 +169,6 @@ def lisp_eval2(x, nsp=None):
         names, values = lisp_eval2(names, nsp), lisp_eval2(values, nsp)
         return Namespace(names, values, nsp)
 
-    elif x[0] == 'eval':
-        assert 1 < len(x) < 4
-        in_namespace = lisp_eval2(x[2], nsp) if len(x) == 3 else nsp
-        r = lisp_eval2(x[1], in_namespace)
-        print(f'eval {x[1]} = {r}')
-        return r
-
     elif x[0] == 'quote':
         return x[1]
 
@@ -204,7 +182,8 @@ def lisp_eval2(x, nsp=None):
         args = x[1:]
 
         if isinstance(symb, Namespace):
-            assert '_proc' in symb # caustom procedure
+            assert '_proc' in symb or '_callable' in symb
+            # custom procedure, a _proc or a callable
             '''
             _proc is a [list] of calls
             it is evaluated sequencially
@@ -213,18 +192,43 @@ def lisp_eval2(x, nsp=None):
               _args, which are not pre-evaled
               _dyn, which points to the current, dynamic nsp
             '''
-            proc = symb['_proc']
             call_nsp = Namespace(('_args', '_dyn'), (args, nsp), symb)
 
-            r = None
-            for p in proc: # TODO: this is a fixed control flow - must be programmable
-                r = lisp_eval2(p, call_nsp)
-            return r
+            if '_proc' in symb:
+                proc = symb['_proc']
+
+                r = None
+                for p in proc: # TODO: this is a fixed control flow - must be programmable
+                    r = lisp_eval2(p, call_nsp)
+                return r
+
+            elif '_callable' in symb:
+                return symb['_callable'](*args, _dyn=nsp)
 
         # calls to Python extensions
         elif callable(symb):
             args = [lisp_eval2(exp, nsp) for exp in args]
             return symb(*args)
+            '''
+            and the contact with nsp is gone
+            but the eval forms do need nsp
+            (and so do the user forms)
+            that's the fundamental difference
+            which forces me to constantly extend eval
+            instead of adding simple callables in the global namespace
+            at the same time
+            eval forms must be exported into the global namespace somehow
+            to be used in user macros
+            the callable form is a natural choice, but it collides with
+            the requirement that callables can only be functional
+            - let's try exporting eval forms as user forms!
+            '''
+            """
+            def callable_in_dyn_eval_namespace(symb, args):
+                _dyn = nsp
+                return symb(*args)
+            return callable_in_dyn_eval_namespace(symb, args)
+            """
 
         else:
             # TODO temporary work-around, figure out if this is indeed a special case
@@ -239,18 +243,59 @@ so a normal function will have to
 3) define-ing each var name to the eval-ed expression in _args
 '''
 
+'''
+    elif x[0] == 'eval':
+        assert 1 < len(x) < 4
+        in_namespace = lisp_eval2(x[2], nsp) if len(x) == 3 else nsp
+        r = lisp_eval2(x[1], in_namespace)
+        print(f'eval {x[1]} = {r}')
+        return r
+'''
+
+def proc_eval(expr, in_nsp_exp, _dyn=None):
+    in_namespace = lisp_eval2(in_nsp_exp, _dyn)
+    r = lisp_eval2(expr, in_namespace)
+    print(f'eval in_namespace {in_nsp_exp} = {in_namespace}')
+    print(f'eval {expr} = {r}')
+    return r
+
+proc_eval_nsp = Namespace()
+proc_eval_nsp['_callable'] = proc_eval
+
+# (define var exp [in_nsp])
+def proc_define(var_exp, exp, in_nsp=None, _dyn=None):
+    assert _dyn is not None
+    nsp = _dyn
+    if in_nsp is None:
+        in_nsp = nsp
+    else:
+        in_nsp = lisp_eval2(in_nsp, nsp)
+
+    # eval here
+    var_name = lisp_eval2(var_exp, nsp) 
+    var_val  = lisp_eval2(exp, nsp)
+    # define, optionally, in another namespace
+    print('define:', var_name, var_val)
+    in_nsp[var_name] = var_val
+
+proc_define_nsp = Namespace()
+proc_define_nsp['_callable'] = proc_define
+
 def standard_nsp():
     "An environment with some Scheme standard procedures."
     nsp = Namespace()
     nsp.update({
         '+': op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
-        '>':op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
+        '>': op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
         'sum': sum,
         'equal?':  op.eq, 
         'length':  len, 
         'print':  print,
         'type':  type,
+        'eval':  proc_eval_nsp,
+        'define': proc_define_nsp,
         })
+
     """
         'abs':     abs,
         'append':  op.add,  
