@@ -39,6 +39,13 @@ def test_integer_arithmetics():
     assert g.eval_str('(* 1 2)') == 2
     assert g.eval_str('(* 33 (+ 1 2))') == 99
 
+def test_string_manipulation():
+    g = Env()
+    assert g.eval_str('(+ "foo_" "bar")') == "foo_bar"
+
+    g.eval_str('(define (+ "foo_" "bar") 5)')
+    assert g.eval_str('foo_bar') == 5
+
 def test_index_n_eval():
     g = Env()
     print(g.eval_str('(quote ((+ 1 2) (+ 3 4)))'))
@@ -49,10 +56,11 @@ def test_index_n_eval():
 def test_dyn_scope():
     g = Env()
     g.eval_str('''(define "sum_typ"
-            (nsp (quote ("_proc")) (quote ((
-              (print _args)
-              (print (type _args))
-              (+ (0 _args) (1 _args))
+            (nsp (list "_proc")
+                 (quote ((
+                    (print _args)
+                    (print (type _args))
+                    (+ (0 _args) (1 _args))
             )))))''')
     assert g.eval_str('(sum_typ 1 2)') == 3
     assert g.eval_str('(sum_typ 33 (sum_typ 1 2))') == 36

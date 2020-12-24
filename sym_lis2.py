@@ -81,6 +81,9 @@ def read_from_tokens(tokens, nesting=0):
         L_one_expr = List()
         while tokens[0] != ')':
             L_one_expr.append(read_from_tokens(tokens, nesting+1))
+            if len(tokens) == 0: # unclosed expression
+                report_expr = lispstr(L_one_expr)[:-1] + ' _!)_'
+                raise(IndexError(f'Unclosed expression {report_expr}'))
         tokens.pop(0) # pop off ')'
         # TODO the rest of tokens could be used for literate documentation
         # for now would nice to just run them in sequence
@@ -114,7 +117,12 @@ class Namespace(dict):
         self.outer = outer
     def find(self, var):
         "Find the innermost Namespace where var appears."
-        return self if (var in self) else self.outer.find(var)
+        if var in self:
+            return self
+        elif self.outer is not None:
+            return self.outer.find(var)
+        else:
+            raise NameError(f"Cannot find {var}")
 
 def lisp_eval2(x, nsp=None):
     """Evaluate an expression in a namespace.
