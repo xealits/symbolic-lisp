@@ -93,7 +93,7 @@ def read_from_tokens(tokens, nesting=0):
         #    raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
         return L_one_expr
     elif ')' == token:
-        raise SyntaxError('unexpected )')
+        raise SyntaxError(f'Unexpected ) before tokens {tokens}')
     else:
         return atom(token)
 
