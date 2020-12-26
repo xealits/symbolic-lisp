@@ -223,6 +223,17 @@ def test_basic_func():
     (func name (a b) (body a b))
     '''
 
+    # this also evaluates dynamically the given commands
+    # in test_metalisp_handy it just passes the commands
+    g.eval_str('''(define "proc_nsp"
+            (nsp (list "_proc")
+                 (quote ((
+                     (nsp (list "_proc") (list (map (eval _dyn) _args)))
+                     ))
+                 )
+            )
+    )''')
+
     g.eval_str('''(define 'func (nsp
     (quote ("_proc"))
     (quote ((
@@ -233,17 +244,22 @@ def test_basic_func():
         (define 'body      (index 2 _args))
         (print _args ":" name arguments)
 
-        (define name (nsp
-            (list "_proc")
-            (list (list
-              (list 'define ''nsp_matched_args
+        (define name (proc_nsp
+              (list 'define "nsp_matched_args"
                     (list 'nsp (list 'quote arguments) (quote (map (eval .) _args))))
               (quote (print "nsp_matched_args" nsp_matched_args))
               (list 'eval 'nsp_matched_args body)
-            ))
          ) _dyn)
     )))))''')
 
+    '''
+    То есть здесь проблема в том что я хочу выполнить что-то для создания
+    дерева вызовов, именно `_args`, поэтому `quote` не подходит и нужен
+    `list` с кучей цитируемых символов.
+    Нужен quote, который пройдёт по всем узлам и выполнит какие-то из них.
+    '''
+
+    g.eval_str("(print 'DEFINE 'FOO)")
     g.eval_str('''(func foo (x y) (+ x y))''')
     g.eval_str("(print 'FOO foo)")
     assert g.eval_str('(foo 1 2)') == 3

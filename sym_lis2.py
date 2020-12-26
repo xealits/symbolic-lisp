@@ -115,6 +115,7 @@ class Namespace(dict):
     def __init__(self, names=(), values=(), outer=None):
         self.update(zip(names, values))
         self.outer = outer
+
     def find(self, var):
         "Find the innermost Namespace where var appears."
         if var in self:
@@ -123,6 +124,12 @@ class Namespace(dict):
             return self.outer.find(var)
         else:
             raise NameError(f"Cannot find {var}")
+
+    def nsp_keys(self):
+        if self.outer is None:
+            return self.keys()
+        else:
+            return self.keys(), self.outer.nsp_keys()
 
 def lisp_eval2(x, nsp=None):
     """Evaluate an expression in a namespace.
@@ -272,7 +279,7 @@ so a normal function will have to
 def proc_eval(in_nsp_exp, expr, _dyn=None):
     in_namespace = lisp_eval2(in_nsp_exp, _dyn)
     r = lisp_eval2(expr, in_namespace)
-    print(f'eval in_namespace {in_nsp_exp} = {in_namespace}')
+    print(f'eval in_namespace {in_nsp_exp} = {in_namespace.nsp_keys()}')
     print(f'eval {expr} = {r}')
     return r
 
@@ -327,6 +334,7 @@ def standard_nsp():
         'eval':  proc_eval_nsp,
         'define': proc_define_nsp,
         'map': proc_map_nsp,
+        'list?':   lambda x: isinstance(x, List), 
         })
 
     """
@@ -340,7 +348,6 @@ def standard_nsp():
         'equal?':  op.eq, 
         'length':  len, 
         'list':    lambda *x: list(x), 
-        'list?':   lambda x: isinstance(x,list), 
         'map':     map,
         'max':     max,
         'min':     min,
