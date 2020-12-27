@@ -216,7 +216,20 @@ def lisp_eval2(x, nsp=None):
               _args, which are not pre-evaled
               _dyn, which points to the current, dynamic nsp
             '''
-            call_nsp = Namespace(('_args', '_dyn'), (args, nsp), symb)
+
+            #TODO: it breaks stuff because defines in the nested _dyn are discarded
+            call_dyn = nsp # Namespace(outer = nsp.get('_dyn', nsp))
+            call_nsp = Namespace(('_args', '_dyn'), (args, call_dyn), symb)
+
+            """
+            в чём разница между call_nsp & _dyn?
+            call_nsp <- symb lexical space
+            _dyn     <- eval namespace
+
+            -- where _dyn does not nest properly,
+            instead it creates _dyn: {_dyn: {_dyn: ...}} nesting.
+            It must be a pointer to another, properly nested Namespace.
+            """
 
             if '_proc' in symb:
                 proc = symb['_proc']
@@ -226,8 +239,11 @@ def lisp_eval2(x, nsp=None):
                     r = lisp_eval2(p, call_nsp)
                 return r
 
+            # Python extensions do not have a call_nsp
+            # because they do not have a lexical namespace within Lisp
+            # they are completely dynamic for Lisp
             elif '_callable' in symb:
-                return symb['_callable'](*args, _dyn=nsp)
+                return symb['_callable'](*args, _dyn=call_dyn)
 
         # calls to Python extensions
         elif callable(symb):
@@ -286,6 +302,17 @@ def proc_eval(in_nsp_exp, expr, _dyn=None):
 proc_eval_nsp = Namespace()
 proc_eval_nsp['_callable'] = proc_eval
 
+def proc_do(*args, _dyn=None):
+    r = None
+    for arg in args:
+        print('do', arg)
+        r = lisp_eval2(arg, _dyn)
+
+    return r
+
+proc_do_nsp = Namespace()
+proc_do_nsp['_callable'] = proc_do
+
 # def proc_eval_explicit(in_nsp_exp, expr, _dyn=None):
 # let's make it always dynamic
 def proc_eval_explicit(expr, _dyn=None):
@@ -329,7 +356,7 @@ proc_define_nsp = Namespace()
 proc_define_nsp['_callable'] = proc_define
 
 def proc_map(expr, list_expr, _dyn=None):
-    print(f'map _dyn = {_dyn}')
+    print(f'map _dyn = {_dyn.nsp_keys()}')
     l = lisp_eval2(list_expr, _dyn)
     assert isinstance(l, List)
 
@@ -359,6 +386,8 @@ def standard_nsp():
         'define': proc_define_nsp,
         'map': proc_map_nsp,
         'list?':   lambda x: isinstance(x, List), 
+        'None': None,
+        'do': proc_do_nsp,
         })
 
     """

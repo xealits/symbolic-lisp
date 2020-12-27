@@ -216,6 +216,45 @@ def test_basic_procedure():
     '''
 """
 
+def test_eval_explicit():
+    g = Env()
+    """
+    def proc_eval_explicit(expr, _dyn=None):
+    # if the list starts with `eval` -- launch the usual eval
+    # if not -- recurse into child lists
+    if isinstance(expr, List) and len(expr) > 0:
+        if expr[0] == 'eval_explicit':
+            r = lisp_eval2(expr[1], in_namespace)
+        else:
+            r = list(map(lambda x: proc_eval_explicit(x, _dyn), expr))
+    else:
+        r = expr
+    """
+
+    g.eval_str('''(define "eval_explicit2"
+            (nsp (list "_proc")
+                 (quote ((
+                     (define 'expr (index 0 _args))
+                     (if (list? expr)
+                         (if (equal? (index 0 expr) "eval_explicit2")
+                             (eval . ((index 1 expr)))
+                             (map (eval_explicit2) expr))
+                         expr)
+                     ))
+                 )
+            )
+    )''')
+
+    g.eval_str('(print "eval_explicit2" eval_explicit2)')
+    assert g.eval_str('''(eval_explicit2
+        (eval foo (bar (map (eval .) baz))
+            (eval_explicit2 (+ 1 2))))''') == \
+        ['eval', 'foo', ['bar', ['map', ['eval', '.'], 'baz']], 3]
+
+    g.eval_str('(define "args" (quote (1 2 3)))')
+    assert g.eval_str('''(eval_explicit2
+        (eval bar (eval_explicit2 args)))''') == \
+        ['eval', 'bar', [1, 2, 3]]
 
 def test_basic_func():
     g = Env()
@@ -234,6 +273,46 @@ def test_basic_func():
             )
     )''')
 
+    g.eval_str('''(define "eval_explicit2"
+            (nsp (list "_proc")
+                 (quote ((
+                     (define 'expr (index 0 _args))
+                     (if (list? expr)
+                         (print 'EVAL_EXPLICIT2_list expr (index 1 expr))
+                         None)
+                     (if (list? expr)
+                         (if (equal? (index 0 expr) "eval_explicit2")
+
+                             (eval . (index 1 expr))
+
+                             (map (eval_explicit2) expr))
+                         expr)
+                     ))
+                 )
+            )
+    )''')
+
+    #                         (do
+    #                             (define 'got_expr_val (eval . (index 1 expr)))
+    #                             (eval _dyn got_expr_val)
+    #                         )
+
+    # TODO: so, many relative namespace mess up everythin
+    # (eval . (index 1 expr))
+    # eval . causes everything to be evaluated in .
+    # when I want only to lookup expr and get its 1 element (arguments) in .
+    # then I want to eval the result in _dyn
+    # in Python's extension it is trivial,
+    # because everything is done in Python's call_nsp
+    # and evals are called separately as needed
+    #
+    # here I cannot just (eval _dyn (eval . ...)
+    # because of the nesting
+    # -- there is no way to pass a value from eval in one namespace to another one
+    #    again, it's the mix of different built-in procedures
+    #    since there are 2 explicit namespaces now, the 1-D hardcoded
+    #    procedures do not with well
+
     g.eval_str('''(define 'func (nsp
     (quote ("_proc"))
     (quote ((
@@ -242,16 +321,36 @@ def test_basic_func():
         (define 'name      (index 0 _args))
         (define 'arguments (index 1 _args))
         (define 'body      (index 2 _args))
-        (print _args ":" name arguments)
+        (print '_ARGS _args ":" name arguments)
+        (print '_ARGS (eval . arguments))
 
         (define name (proc_nsp
-              (eval_explicit (define "nsp_matched_args"
-                    (nsp (quote (eval_explicit arguments))
+              (eval_explicit2 (define "nsp_matched_args"
+                    (nsp (quote (eval_explicit2 arguments))
                          (map (eval .) _args))))
               (quote (print "nsp_matched_args" nsp_matched_args))
               (list 'eval 'nsp_matched_args body)
          ) _dyn)
     )))))''')
+
+    """
+    map _dyn =
+    {'_args': [['quote', ['eval_explicit2', 'arguments']]],
+     '_dyn':
+        {'_args': [['nsp', ['quote', ['eval_explicit2', 'arguments']], ['map', ['eval', '.'], '_args']]],
+         '_dyn':
+            {'_args': [['define', 'nsp_matched_args', ['nsp', ['quote', ['eval_explicit2', 'arguments']], ['map', ['eval', '.'], '_args']]]],
+             '_dyn':
+                 {'_args': ['foo', ['x', 'y'], ['+', 'x', 'y']],
+                  '_dyn':
+                     {'+': <built-in function add>, '-': <built-in function sub>, '*': <built-in function mul>, '/': <built-in function truediv>, '>': <built-in function gt>, '<': <built-in function lt>, '>=': <built-in function ge>, '<=': <built-in function le>, '=': <built-in function eq>, 'sum': <built-in function sum>, 'equal?': <built-in function eq>, 'length': <built-in function len>, 'print': <built-in function print>, 'type': <class 'type'>, 'eval': {'_callable': <function proc_eval at 0x7fc71dc0ee50>}, 'eval_explicit': {'_callable': <function proc_eval_explicit at 0x7fc71dc0eee0>}, 'define': {'_callable': <function proc_define at 0x7fc71dc0ef70>}, 'map': {'_callable': <function proc_map at 0x7fc71dc78040>}, 'list?': <function standard_nsp.<locals>.<lambda> at 0x7fc71db52c10>, 'proc_nsp': {'_proc': [['nsp', ['list', '_proc'], ['list', ['map', ['eval', '_dyn'], '_args']]]]}, 'eval_explicit2': {'_proc': [['define', "'expr", ['index', 0, '_args']], ['if', ['list?', 'expr'], ['if', ['equal?', ['index', 0, 'expr'], 'eval_explicit2'], ['eval', '.', [['index', 1, 'expr']]], ['map', ['eval_explicit2'], 'expr']], 'expr']]}, 'func': {'_proc': [['print', '_args', '_args'], ['print', '_dyn', '_dyn'], ['define', "'name", ['index', 0, '_args']], ['define', "'arguments", ['index', 1, '_args']], ['define', "'body", ['index', 2, '_args']], ['print', '_args', ':', 'name', 'arguments'], ['define', 'name', ['proc_nsp', ['eval_explicit2', ['define', 'nsp_matched_args', ['nsp', ['quote', ['eval_explicit2', 'arguments']], ['map', ['eval', '.'], '_args']]]], ['quote', ['print', 'nsp_matched_args', 'nsp_matched_args']], ['list', "'eval", "'nsp_matched_args", 'body']], '_dyn']]}},
+                  'name': 'foo',
+                  'arguments': ['x', 'y'],
+                  'body': ['+', 'x', 'y']},
+             'expr': ['define', 'nsp_matched_args', ['nsp', ['quote', ['eval_explicit2', 'arguments']], ['map', ['eval', '.'], '_args']]]},
+         'expr': ['nsp', ['quote', ['eval_explicit2', 'arguments']], ['map', ['eval', '.'], '_args']]},
+     'expr': ['quote', ['eval_explicit2', 'arguments']]}
+    """
 
     # can also be (eval_explicit (eval nsp_matched_args (eval_explicit body)))
 
