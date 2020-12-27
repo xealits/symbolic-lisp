@@ -220,6 +220,8 @@ def lisp_eval2(x, nsp=None):
             #TODO: it breaks stuff because defines in the nested _dyn are discarded
             call_dyn = nsp # Namespace(outer = nsp.get('_dyn', nsp))
             call_nsp = Namespace(('_args', '_dyn'), (args, call_dyn), symb)
+            ##call_nsp = Namespace(('_args',), (args,), symb)
+            ##call_nsp['_dyn'] = Namespace(outer = call_nsp)
 
             """
             в чём разница между call_nsp & _dyn?
@@ -243,7 +245,7 @@ def lisp_eval2(x, nsp=None):
             # because they do not have a lexical namespace within Lisp
             # they are completely dynamic for Lisp
             elif '_callable' in symb:
-                return symb['_callable'](*args, _dyn=call_dyn)
+                return symb['_callable'](*args, _dyn=nsp)
 
         # calls to Python extensions
         elif callable(symb):
@@ -388,6 +390,7 @@ def standard_nsp():
         'list?':   lambda x: isinstance(x, List), 
         'None': None,
         'do': proc_do_nsp,
+        'nsp_keys': lambda x: x.nsp_keys(),
         })
 
     """
