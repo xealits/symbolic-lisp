@@ -286,6 +286,29 @@ def proc_eval(in_nsp_exp, expr, _dyn=None):
 proc_eval_nsp = Namespace()
 proc_eval_nsp['_callable'] = proc_eval
 
+# def proc_eval_explicit(in_nsp_exp, expr, _dyn=None):
+# let's make it always dynamic
+def proc_eval_explicit(expr, _dyn=None):
+    #in_namespace = lisp_eval2(in_nsp_exp, _dyn)
+    in_namespace = _dyn
+
+    # if the list starts with `eval` -- launch the usual eval
+    # if not -- recurse into child lists
+    if isinstance(expr, List) and len(expr) > 0:
+        if expr[0] == 'eval_explicit':
+            r = lisp_eval2(expr[1], in_namespace)
+        else:
+            r = list(map(lambda x: proc_eval_explicit(x, _dyn), expr))
+    else:
+        r = expr
+
+    #print(f'eval_explicit in_namespace = {in_namespace.nsp_keys()}')
+    #print(f'eval_explicit {expr} = {r}')
+    return r
+
+proc_eval_explicit_nsp = Namespace()
+proc_eval_explicit_nsp['_callable'] = proc_eval_explicit
+
 # (define var exp [in_nsp])
 def proc_define(var_exp, exp, in_nsp=None, _dyn=None):
     assert _dyn is not None
@@ -332,6 +355,7 @@ def standard_nsp():
         'print':  print,
         'type':  type,
         'eval':  proc_eval_nsp,
+        'eval_explicit':  proc_eval_explicit_nsp,
         'define': proc_define_nsp,
         'map': proc_map_nsp,
         'list?':   lambda x: isinstance(x, List), 
