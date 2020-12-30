@@ -175,6 +175,7 @@ def lisp_eval2(x, nsp=None):
         ind = x[1]
         assert isinstance(ind, Int)
         l = lisp_eval2(x[2], nsp)
+        print("LOG index", x[2], ind, l)
         assert isinstance(l, list)
         return l[ind]  # or not to eval
 
@@ -304,6 +305,18 @@ def proc_eval(in_nsp_exp, expr, _dyn=None):
 proc_eval_nsp = Namespace()
 proc_eval_nsp['_callable'] = proc_eval
 
+def proc_eval2(in_nsp_exp, expr, _dyn=None):
+    in_namespace = lisp_eval2(in_nsp_exp, _dyn)
+    var_name     = lisp_eval2(expr,       _dyn)
+    r = lisp_eval2(var_name, in_namespace)
+    print(f'''eval2 in_namespace {in_nsp_exp} = {in_namespace.nsp_keys()}
+      {expr} = {var_name}
+      {r}''')
+    return r
+
+proc_eval2_nsp = Namespace()
+proc_eval2_nsp['_callable'] = proc_eval2
+
 def proc_do(*args, _dyn=None):
     r = None
     for arg in args:
@@ -383,7 +396,8 @@ def standard_nsp():
         'length':  len, 
         'print':  print,
         'type':  type,
-        'eval':  proc_eval_nsp,
+        'eval':   proc_eval_nsp,
+        'eval2':  proc_eval2_nsp,
         'eval_explicit':  proc_eval_explicit_nsp,
         'define': proc_define_nsp,
         'map': proc_map_nsp,

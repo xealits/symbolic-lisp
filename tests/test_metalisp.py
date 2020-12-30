@@ -137,8 +137,9 @@ def test_dyn_nested_scope():
               (print 'sumwrapper 'NAMESPACE_dyn (nsp_keys _dyn))
               (sum_dyn_nested)
             )))))''')
-    assert g.eval_str('(sum_wrapper)') == 36
-    assert False
+    with pytest.raises(NameError):
+        # cannot find the variable, because the dynamic scope does not nest
+        g.eval_str('(sum_wrapper)') == 36
 
 def test_add_quotes():
     g = Env()
