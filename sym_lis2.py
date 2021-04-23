@@ -9,6 +9,7 @@ import re
 import math
 import operator as op
 from sys import exit
+import pdb
 
 # Types
 #class List(list):
@@ -189,7 +190,7 @@ def lisp_eval2(x, nsp=None):
         ind = x[1]
         assert isinstance(ind, Int)
         l = lisp_eval2(x[2], nsp)
-        print("LOG index", x[2], ind, l)
+        logging.debug("LOG index %s" % str((x[2], ind, l)))
         assert isinstance(l, list)
         return l[ind]  # or not to eval
 
@@ -305,7 +306,7 @@ so a normal function will have to
         assert 1 < len(x) < 4
         in_namespace = lisp_eval2(x[2], nsp) if len(x) == 3 else nsp
         r = lisp_eval2(x[1], in_namespace)
-        print(f'eval {x[1]} = {r}')
+        logging.debug(f'eval {x[1]} = {r}')
         return r
 '''
 
@@ -318,8 +319,8 @@ def lisp_eval_str(string, env=None):
 def proc_eval(in_nsp_exp, expr, _dyn=None):
     in_namespace = lisp_eval2(in_nsp_exp, _dyn)
     r = lisp_eval2(expr, in_namespace)
-    print(f'eval in_namespace {in_nsp_exp} = {in_namespace.nsp_keys()}')
-    print(f'eval {expr} = {r}')
+    logging.debug(f'eval in_namespace {in_nsp_exp} = {in_namespace.nsp_keys()}')
+    logging.debug(f'eval {expr} = {r}')
     return r
 
 proc_eval_nsp = Namespace()
@@ -329,7 +330,7 @@ def proc_eval2(in_nsp_exp, expr, _dyn=None):
     in_namespace = lisp_eval2(in_nsp_exp, _dyn)
     var_name     = lisp_eval2(expr,       _dyn)
     r = lisp_eval2(var_name, in_namespace)
-    print(f'''eval2 in_namespace {in_nsp_exp} = {in_namespace.nsp_keys()}
+    logging.debug(f'''eval2 in_namespace {in_nsp_exp} = {in_namespace.nsp_keys()}
       {expr} = {var_name}
       {r}''')
     return r
@@ -340,7 +341,7 @@ proc_eval2_nsp['_callable'] = proc_eval2
 def proc_do(*args, _dyn=None):
     r = None
     for arg in args:
-        print('do', arg)
+        logging.debug('do', arg)
         r = lisp_eval2(arg, _dyn)
 
     return r
@@ -364,8 +365,8 @@ def proc_eval_explicit(expr, _dyn=None):
     else:
         r = expr
 
-    #print(f'eval_explicit in_namespace = {in_namespace.nsp_keys()}')
-    #print(f'eval_explicit {expr} = {r}')
+    #logging.debug(f'eval_explicit in_namespace = {in_namespace.nsp_keys()}')
+    #logging.debug(f'eval_explicit {expr} = {r}')
     return r
 
 proc_eval_explicit_nsp = Namespace()
@@ -374,6 +375,9 @@ proc_eval_explicit_nsp['_callable'] = proc_eval_explicit
 # (define var exp [in_nsp])
 def proc_define(var_exp, exp, in_nsp=None, _dyn=None):
     assert _dyn is not None
+
+    #pdb.set_trace()
+
     nsp = _dyn
     if in_nsp is None:
         in_nsp = nsp
@@ -384,14 +388,14 @@ def proc_define(var_exp, exp, in_nsp=None, _dyn=None):
     var_name = lisp_eval2(var_exp, nsp) 
     var_val  = lisp_eval2(exp, nsp)
     # define, optionally, in another namespace
-    print('define:', var_name, var_val)
+    logging.debug('define: %s = %s' % (str(var_name), str(var_val)))
     in_nsp[var_name] = var_val
 
 proc_define_nsp = Namespace()
 proc_define_nsp['_callable'] = proc_define
 
 def proc_map(expr, list_expr, _dyn=None):
-    print(f'map _dyn = {_dyn.nsp_keys()}')
+    logging.debug(f'map _dyn = {_dyn.nsp_keys()}')
     l = lisp_eval2(list_expr, _dyn)
     assert isinstance(l, List)
 
@@ -399,7 +403,7 @@ def proc_map(expr, list_expr, _dyn=None):
     if isinstance(expr, Symbol): expr = [expr]
     r = [lisp_eval2(expr + [arg], _dyn) for arg in l]
 
-    print(f'map {expr} on {l} = {r}')
+    logging.debug(f'map {expr} on {l} = {r}')
     return r
 
 proc_map_nsp = Namespace()
@@ -436,13 +440,15 @@ def standard_nsp():
     "An environment with some Scheme standard procedures."
     nsp = Namespace()
     nsp.update({
-        'exit':    exit,
+        #'root_nsp': nsp, # TODO: it does not work now, it is not updated with defines
+        'exit':      exit,
         '+': op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
         '>': op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
         'sum': sum,
         'equal?':  op.eq, 
         'length':  len, 
         'print':  print,
+        'debug':  lambda *x: logging.debug(' '.join([str(i) for i in x])),
         'type':  type,
         'eval':   proc_eval_nsp,
         'eval2':  proc_eval2_nsp,
@@ -452,10 +458,12 @@ def standard_nsp():
         'list?':   lambda x: isinstance(x, List), 
         'None': None,
         'do': proc_do_nsp,
-        'nsp_keys': lambda x: x.nsp_keys(),
+        'nsp_keys': lambda x:      x.nsp_keys(),
+        'in':       lambda nsp, x: nsp[x],
         'repr':   repr_double_quote,
         'source': proc_source_nsp,
         'symbol?': lambda x: isinstance(x, Symbol),
+        'join':    lambda s, l: s.join(l),
         })
 
     """
@@ -501,6 +509,9 @@ class GlobalEnv(Namespace):
             self.update(env)
         else:
             raise TypeError("wrong content for GlobalEnv: %s" % repr(env))
+
+        # populate with root namespace
+        self["_root_nsp"] = self
 
     def eval(self, x):
         return lisp_eval2(x, self)

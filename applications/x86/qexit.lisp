@@ -1,15 +1,17 @@
-(source 'x86.lisp)
+(source "x86.lisp")
+
+(print "PRINT: qexit.lisp")
 
 (.data)
-(.ascii '"Hello,_world\0")
+(.ascii "Hello,_world\0")
 
+(quote (movl esp ebx
 (.text)
 (.globl '_start)
 
 (label '_start)
 
-(quote (movl esp ebx
 (exit_to_kernel '$0)
-))
 
 (exit_to_kernel esp)
+))

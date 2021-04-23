@@ -23,36 +23,8 @@ def define_proc_nsp():
 
     return g
 
-
-def test_basic_func_builtin_explicit_macro(define_proc_nsp):
-    g = define_proc_nsp
-
-    g.eval_str('''(define 'func (nsp
-    (quote ("_proc"))
-    (quote ((
-        (print "_args" _args)
-        (print "_dyn"  _dyn)
-        (define 'name      (index 0 _args))
-        (define 'arguments (index 1 _args))
-        (define 'body      (index 2 _args))
-        (print '_ARGS _args ":" name arguments)
-        (print '_ARGS (eval . arguments))
-
-        (define name (proc_nsp
-              (eval_explicit (define "nsp_matched_args"
-                    (nsp (quote (eval_explicit arguments))
-                         (map (eval .) _args))))
-              (quote (print "nsp_matched_args" nsp_matched_args))
-              (list 'eval 'nsp_matched_args body)
-         ) _dyn)
-    )))))''')
-
-    g.eval_str('(func foo (x y) (+ x y))')
-    assert g.eval_str('(foo 1 2)') == 3
-    assert g.eval_str('(foo 1 (+ 10 2))') == 13
-    assert g.eval_str('(foo (* 2 3) (foo 10 2))') == 18
-
-def test_basic_func_custom_macro(define_proc_nsp):
+@pytest.fixture
+def define_func(define_proc_nsp):
     g = define_proc_nsp
 
     g.eval_str('''(define "eval_explicit2"
@@ -97,6 +69,41 @@ def test_basic_func_custom_macro(define_proc_nsp):
          ) _dyn)
     )))))''')
 
+    return g
+
+
+def test_basic_func_builtin_explicit_macro(define_proc_nsp):
+    g = define_proc_nsp
+
+    g.eval_str('''(define 'func (nsp
+    (quote ("_proc"))
+    (quote ((
+        (print "_args" _args)
+        (print "_dyn"  _dyn)
+        (define 'name      (index 0 _args))
+        (define 'arguments (index 1 _args))
+        (define 'body      (index 2 _args))
+        (print '_ARGS _args ":" name arguments)
+        (print '_ARGS (eval . arguments))
+
+        (define name (proc_nsp
+              (eval_explicit (define "nsp_matched_args"
+                    (nsp (quote (eval_explicit arguments))
+                         (map (eval .) _args))))
+              (quote (print "nsp_matched_args" nsp_matched_args))
+              (list 'eval 'nsp_matched_args body)
+         ) _dyn)
+    )))))''')
+
+    g.eval_str('(func foo (x y) (+ x y))')
+    assert g.eval_str('(foo 1 2)') == 3
+    assert g.eval_str('(foo 1 (+ 10 2))') == 13
+    assert g.eval_str('(foo (* 2 3) (foo 10 2))') == 18
+
+
+def test_basic_func_custom_macro(define_func):
+    g = define_func
+
     g.eval_str("(print 'DEFINE 'FOO)")
     g.eval_str('''(func foo (x y) (+ x y))''')
     g.eval_str("(print 'FOO foo)")
@@ -104,4 +111,12 @@ def test_basic_func_custom_macro(define_proc_nsp):
     assert g.eval_str('(foo 1 2)') == 3
     assert g.eval_str('(foo 1 (+ 10 2))') == 13
     assert g.eval_str('(foo (* 2 3) (foo 10 2))') == 18
+
+def test_basic_func_nested(define_func):
+    g = define_func
+
+    g.eval_str('(func bar (x) (+ x 2))')
+    g.eval_str('(func foo (x y) (* (bar x) y))')
+
+    assert g.eval_str('(foo 4 3)') == 18
 

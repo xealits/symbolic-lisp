@@ -24,6 +24,13 @@ def test_source_lib():
     assert g.eval_str('substitute_example2') == \
            g.eval_str('(quote (1 2 5))')
 
+def test_source_lib_chain():
+    g = GlobalEnv()
+    g.eval_str('(source "applications/lib_bar.lisp")')
+
+    assert 'bar' in g
+    assert 'foo' in g
+
 #def test_env_begin_define():
 #    g = GlobalEnv()
 #    g.eval_str('''
