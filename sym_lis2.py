@@ -117,6 +117,19 @@ class Namespace(dict):
         self.update(zip(names, values))
         self.outer = outer
 
+    def __str__(self):
+        "Pretty nsp repr"
+
+        all_nsps = []
+        nsp = self
+        indent = 0
+        while nsp is not None:
+            all_nsps.append('\t'*indent + str(nsp.keys()))
+            nsp = nsp.outer
+            indent += 1
+
+        return '\n'.join(all_nsps)
+
     def find(self, var):
         "Find the innermost Namespace where var appears."
         if var in self:
@@ -296,6 +309,12 @@ so a normal function will have to
         return r
 '''
 
+def lisp_eval_str(string, env=None):
+    res = None
+    for expr in parse(string):
+        res = lisp_eval2(expr) if env is None else lisp_eval2(expr, env)
+    return res
+
 def proc_eval(in_nsp_exp, expr, _dyn=None):
     in_namespace = lisp_eval2(in_nsp_exp, _dyn)
     r = lisp_eval2(expr, in_namespace)
@@ -386,6 +405,29 @@ def proc_map(expr, list_expr, _dyn=None):
 proc_map_nsp = Namespace()
 proc_map_nsp['_callable'] = proc_map
 
+def proc_source(*args, _dyn=None):
+    logging.debug('proc_source: args, _dyn: %s\n%s' % (str(args), str(_dyn)))
+
+    env = _dyn # lisp_eval2(where_to, _dyn)
+    logging.debug('proc_source: env: %s', str(env))
+
+    filenames = [lisp_eval2(exp, env) for exp in args]
+    logging.debug('proc_source: filenames: %s', str(filenames))
+
+    results = []
+    for fname in filenames:
+        with open(fname.data) as f:
+            file_program = f.read()
+
+            logging.debug('proc_source: file_program: %s', file_program)
+            res = lisp_eval_str(file_program, env)
+            results.append(res)
+
+    return results
+
+proc_source_nsp = Namespace()
+proc_source_nsp['_callable'] = proc_source
+
 def repr_double_quote(obj):
     r = repr(obj)
     return f'"{r[1:-1]}"' if isinstance(obj, String) else r
@@ -411,7 +453,9 @@ def standard_nsp():
         'None': None,
         'do': proc_do_nsp,
         'nsp_keys': lambda x: x.nsp_keys(),
-        'repr': repr_double_quote,
+        'repr':   repr_double_quote,
+        'source': proc_source_nsp,
+        'symbol?': lambda x: isinstance(x, Symbol),
         })
 
     """
@@ -433,7 +477,6 @@ def standard_nsp():
         'number?': lambda x: isinstance(x, Number),   
         'procedure?': callable,
         'round':   round,
-        'symbol?': lambda x: isinstance(x, Symbol),
     })
     nsp.update(vars(math)) # sin, cos, sqrt, pi, ...
     """
