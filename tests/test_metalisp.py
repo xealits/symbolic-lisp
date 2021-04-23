@@ -1,5 +1,6 @@
+import sym_lis2
 from sym_lis2 import GlobalEnv as Env
-import pytest
+import pytest, mock
 
 
 '''
@@ -294,4 +295,13 @@ def test_eval_explicit():
     assert g.eval_str('''(eval_explicit2
         (eval bar (eval_explicit2 args)))''') == \
         ['eval', 'bar', [1, 2, 3]]
+
+def test_exit():
+    g = Env()
+
+    with pytest.raises(SystemExit) as ex:
+        g.eval_str('(exit 0)')
+
+    assert ex.type == SystemExit
+    assert ex.value.code == 0
 

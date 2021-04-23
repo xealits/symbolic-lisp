@@ -1,7 +1,7 @@
 (source 'x86.lisp)
 
 (.data)
-(.ascii '"Hello,_world\0")
+(.ascii "Hello,_world\0")
 
 (.text)
 (.globl '_start)

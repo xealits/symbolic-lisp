@@ -3,7 +3,7 @@
 #   ld global_variable.o
 #   ./a.out 
 
-all: global_variable2.out global_variable.out exit.out qexit.out max.out
+all: global_variable3.out exit.out qexit.out max.out
 
 #./sym_repl.py --script applications/x86/exit_test.lisp
 

@@ -6,7 +6,7 @@ import logging
 from textwrap import dedent
 from os.path import isfile
 
-from sym_lis import GlobalEnv, parse, List, lispstr
+from sym_lis2 import GlobalEnv, parse, List, lispstr
 
 
 def handy_input(prompt='> '):
@@ -17,6 +17,7 @@ def handy_input(prompt='> '):
     # prompt the user for input
     given_input = input(prompt)
     all_input_strings += given_input
+
     # and handle the two newline ending
     while given_input:
         # if previous input is not empty

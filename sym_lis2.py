@@ -8,6 +8,7 @@ import re
 
 import math
 import operator as op
+from sys import exit
 
 # Types
 #class List(list):
@@ -385,10 +386,15 @@ def proc_map(expr, list_expr, _dyn=None):
 proc_map_nsp = Namespace()
 proc_map_nsp['_callable'] = proc_map
 
+def repr_double_quote(obj):
+    r = repr(obj)
+    return f'"{r[1:-1]}"' if isinstance(obj, String) else r
+
 def standard_nsp():
     "An environment with some Scheme standard procedures."
     nsp = Namespace()
     nsp.update({
+        'exit':    exit,
         '+': op.add, '-':op.sub, '*':op.mul, '/':op.truediv, 
         '>': op.gt, '<':op.lt, '>=':op.ge, '<=':op.le, '=':op.eq, 
         'sum': sum,
@@ -405,6 +411,7 @@ def standard_nsp():
         'None': None,
         'do': proc_do_nsp,
         'nsp_keys': lambda x: x.nsp_keys(),
+        'repr': repr_double_quote,
         })
 
     """
