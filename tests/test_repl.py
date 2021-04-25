@@ -35,7 +35,7 @@ def test_repl_script_lisp():
 
 SCRIPT = '''
 (+ 1 2)
-(print 'foo 'bar)
+(print "foo" "bar")
 (print (+ ( * 5 44) 2))
 
 (exit 0)

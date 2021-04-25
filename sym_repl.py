@@ -6,7 +6,7 @@ import logging
 from textwrap import dedent
 from os.path import isfile
 
-from sym_lis2 import GlobalEnv, parse, List, lispstr
+from sym_lis3 import GlobalEnv, parse, List, lispstr
 
 
 def handy_input(prompt='> '):
@@ -35,9 +35,12 @@ def repl(prompt='sym_repl> '):
         input_program = handy_input(prompt)
         if not input_program.strip(): continue
 
-        val = g.eval_str(input_program)
-        if val is not None: 
-            print(lispstr(val))
+        try:
+            val = g.eval_str(input_program)
+            if val is not None: 
+                print(lispstr(val))
+        except Exception as e:
+            print(e)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

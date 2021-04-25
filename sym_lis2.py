@@ -131,6 +131,22 @@ class Namespace(dict):
 
         return '\n'.join(all_nsps)
 
+    def call_stack(self):
+        "list of nsp names that led to this one"
+
+        if self.outer is None:
+            return ['root_nsp']
+        else:
+            my_name = None
+            for name, obj in self.outer.items():
+                if obj is self:
+                    my_name = name
+                    break
+
+            return self.outer.call_stack() + [str(my_name)]
+
+        pdb.set_trace()
+
     def find(self, var):
         "Find the innermost Namespace where var appears."
         if var in self:
@@ -153,7 +169,9 @@ def lisp_eval2(x, nsp=None):
     """
 
     if nsp is None:
-        nsp = {}
+        nsp = Namespace()
+
+    logging.debug(str(nsp.call_stack())) # stack of nsp names up to current
 
     if isinstance(x, Symbol):          # name reference
         if x == '.': return nsp        # current namespace
@@ -511,7 +529,7 @@ class GlobalEnv(Namespace):
             raise TypeError("wrong content for GlobalEnv: %s" % repr(env))
 
         # populate with root namespace
-        self["_root_nsp"] = self
+        self["root_nsp"] = self
 
     def eval(self, x):
         return lisp_eval2(x, self)
