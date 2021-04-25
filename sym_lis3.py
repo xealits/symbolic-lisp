@@ -72,17 +72,17 @@ def read_all_from_tokens(tokens):
 
     return all_expr
 
-def read_from_tokens(tokens, nesting=0):
+def read_from_tokens(tokens):
     """Read one expression from a sequence of tokens.
 
     An expression is either a List or an atom."""
 
     token = tokens.pop(0)
     # parse one nesting
-    if '(' == token:
+    if '(' == token and not isinstance(token, String):
         L_one_expr = List()
-        while tokens[0] != ')':
-            L_one_expr.append(read_from_tokens(tokens, nesting+1))
+        while not (tokens[0] == ')' and not isinstance(tokens[0], String)):
+            L_one_expr.append(read_from_tokens(tokens))
             if len(tokens) == 0: # unclosed expression
                 report_expr = lispstr(L_one_expr)[:-1] + ' _!)_'
                 raise(IndexError(f'Unclosed expression {report_expr}'))
@@ -94,7 +94,7 @@ def read_from_tokens(tokens, nesting=0):
         #    #
         #    raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
         return L_one_expr
-    elif ')' == token:
+    elif ')' == token and not isinstance(token, String):
         raise SyntaxError(f'Unexpected ) before tokens {tokens}')
     else:
         return atom(token)
@@ -146,6 +146,8 @@ def standard_env():
         'type?':   type,
         'print':   lambda *x: print(*x),
         'None':    None,
+        'str':     str,
+        'join':    lambda d, l: d.join([str(x) for x in l]),
     })
     return env
 
@@ -232,9 +234,11 @@ def lisp_eval(x, env=global_env):
         (_, var_exp, exp) = x
         var = lisp_eval(var_exp, env) # dynamic name
         env[var] = lisp_eval(exp, env)
+        return env[var]
     elif x[0] == 'set!':           # (set! var exp)
         (_, var, exp) = x
         env.find(var)[var] = lisp_eval(exp, env)
+        return env.find(var)[var]
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
         return Procedure(parms, body, env)

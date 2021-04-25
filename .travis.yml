@@ -9,6 +9,7 @@ before_install:
 script:
     - PYTHONPATH=. pytest --cov-report term --cov=sym_lis
     - PYTHONPATH=. pytest --cov-report term --cov=sym_lis2     --cov-append
+    - PYTHONPATH=. pytest --cov-report term --cov=sym_lis3     --cov-append
     - PYTHONPATH=. pytest --cov-report term --cov=sym_repl     --cov-append
     - PYTHONPATH=. pytest --cov-report term --cov=plugin_shell --cov-append
 after_success:

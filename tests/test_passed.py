@@ -22,15 +22,17 @@ def test_add_lists():
     g = GlobalEnv()
     assert g.eval_str('(+ (list 1 2 3) (list 34 3 2))') == g.eval_str('(list 1 2 3 34 3 2)')
 
+def test_foo():
+    g = GlobalEnv()
+    var_foo_addr = g.eval_str('(define "foo" (lambda (x y) (+ 2 (+ x y))))')
+    assert g.eval_str('foo') is var_foo_addr
+
 @pytest.fixture
 def define_foo():
     g = GlobalEnv()
     g.eval_str('(define "foo" (lambda (x y) (+ 2 (+ x y))))')
     g.eval_str('(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))')
     return g
-
-#def test_define_0():
-#    assert g.eval_str('(foo 4 2)') == 8
 
 @pytest.mark.parametrize("foo_inp, foo_res", [
     ((4, 2), 8),
