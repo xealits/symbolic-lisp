@@ -8,6 +8,7 @@ import operator as op
 import re
 from collections import UserString
 import logging
+import pdb
 
 from sys import exit
 
@@ -137,12 +138,14 @@ def standard_env():
         'null?':   lambda x: x == [], 
         'number?': lambda x: isinstance(x, Number),   
         'procedure?': callable,
+        'callable?': callable,
         'round':   round,
         'symbol?': lambda x: isinstance(x, Symbol),
         'in?':     lambda x, e: x in e,
         'is?':     lambda x, y: x is y,
         'type?':   type,
         'print':   lambda *x: print(*x),
+        'None':    None,
     })
     return env
 
@@ -154,16 +157,17 @@ class Env(dict):
 
     def find(self, var):
         "Find the innermost Env where var appears."
+        #pdb.set_trace()
         if var in self:
             return self
         elif self.outer is None:
-            raise NameError("Lisp could not find %s" % var)
             # not found name handler hook
             if "not_found" in self:
                 return self["not_found"](var)
+            raise NameError("Lisp could not find %s" % var)
             return None
         else:
-            self.outer.find(var)
+            return self.outer.find(var)
 
 global_env = standard_env()
 class GlobalEnv(Env):
@@ -225,7 +229,8 @@ def lisp_eval(x, env=global_env):
         exp = (conseq if lisp_eval(test, env) else alt)
         return lisp_eval(exp, env)
     elif x[0] == 'define':         # (define var exp)
-        (_, var, exp) = x
+        (_, var_exp, exp) = x
+        var = lisp_eval(var_exp, env) # dynamic name
         env[var] = lisp_eval(exp, env)
     elif x[0] == 'set!':           # (set! var exp)
         (_, var, exp) = x

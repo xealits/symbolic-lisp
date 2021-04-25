@@ -1,14 +1,13 @@
-from sym_lis import GlobalEnv
+from sym_lis3 import GlobalEnv
 import pytest
 
 
 @pytest.mark.parametrize("noneref", [
-    ("(None)"),
+    ("None", None),
 ])
 def test_none(noneref):
     g = GlobalEnv()
-    assert g.eval_str(noneref) is None
-
+    assert g.eval_str(noneref[0]) is noneref[1]
 
 @pytest.mark.parametrize("test_input,expected", [
     ("(+ 1 2)", 3),
@@ -26,28 +25,30 @@ def test_add_lists():
 @pytest.fixture
 def define_foo():
     g = GlobalEnv()
-    g.eval_str('(define foo (lambda (x y) (+ 2 (+ x y))))')
+    g.eval_str('(define "foo" (lambda (x y) (+ 2 (+ x y))))')
     g.eval_str('(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))')
     return g
 
 #def test_define_0():
 #    assert g.eval_str('(foo 4 2)') == 8
 
-def test_define(define_foo):
+@pytest.mark.parametrize("foo_inp, foo_res", [
+    ((4, 2), 8),
+    ((5, 2), 9),
+    ((13, 7), 22),
+])
+def test_define(define_foo, foo_inp, foo_res):
     g = define_foo
-    assert g.eval_str('(foo 4 2)') == 8
-
-def test_define2(define_foo):
-    g = define_foo
-    assert g.eval_str('(foo 5 2)') == 9
+    assert g.eval_str('(foo %d %d)' % foo_inp) == foo_res
 
 def test_concat_symbols():
     g = GlobalEnv()
     assert g.eval_str('(+ (quote foo) (quote _bar))') == 'foo_bar'
 
-def test_define_dynamic():
-    g = GlobalEnv()
-    assert callable(g.eval_str('(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))'))
+def test_define_dynamic(define_foo):
+    g = define_foo
+    g.eval_str('(define (+ (quote foo) (quote _bar)) (lambda (x y) (+ 2 (+ x y))))')
+    assert callable(g.eval_str('foo_bar'))
 
 def test_define_dynamic_eval(define_foo):
     g = define_foo
