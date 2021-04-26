@@ -1,5 +1,5 @@
 import subprocess
-from sym_lis import GlobalEnv
+
 
 def test_repl_session():
     comlist = ['./sym_repl.py']
@@ -12,6 +12,7 @@ def test_repl_session():
     #res = subprocess.run(comlist,
     #        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+    print(script)
     print(res.stdout)
     print(res.stderr)
 
@@ -32,10 +33,6 @@ def test_repl_session_debug():
     assert res.returncode == 0
     assert b'8\n' in res.stdout
     assert b'DEBUG' in res.stderr
-
-def test_repl_script_lisp():
-    g = GlobalEnv()
-    assert g.eval_str('') is None
 
 SCRIPT = '''
 (print "foo" "bar")
