@@ -83,9 +83,11 @@ def read_from_tokens(tokens):
         L_one_expr = List()
         while not (tokens[0] == ')' and not isinstance(tokens[0], String)):
             L_one_expr.append(read_from_tokens(tokens))
-            if len(tokens) == 0: # unclosed expression
+
+            # unclosed expression
+            if len(tokens) == 0:
                 report_expr = lispstr(L_one_expr)[:-1] + ' _!)_'
-                raise(SyntaxError(f'Unclosed expression {report_expr}'))
+                raise SyntaxError(f'Unclosed expression {report_expr}')
         tokens.pop(0) # pop off ')'
         # TODO the rest of tokens could be used for literate documentation
         # for now would nice to just run them in sequence
