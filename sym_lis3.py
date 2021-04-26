@@ -87,17 +87,13 @@ def read_from_tokens(tokens):
             # unclosed expression
             if len(tokens) == 0:
                 report_expr = lispstr(L_one_expr)[:-1] + ' _!)_'
-                raise SyntaxError(f'Unclosed expression {report_expr}')
+                raise SyntaxError('Unclosed expression {}'.format(report_expr))
+
         tokens.pop(0) # pop off ')'
-        # TODO the rest of tokens could be used for literate documentation
-        # for now would nice to just run them in sequence
-        # but it breaks
-        #if nesting==0 and tokens:
-        #    #
-        #    raise SyntaxError('unexpected continuation %s' % lispstr(tokens))
         return L_one_expr
+
     elif ')' == token and not isinstance(token, String):
-        raise SyntaxError(f'Unexpected ) before tokens {tokens}')
+        raise SyntaxError('Unexpected ) before tokens {}'.format(tokens))
     else:
         return atom(token)
 
