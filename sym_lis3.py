@@ -85,7 +85,7 @@ def read_from_tokens(tokens):
             L_one_expr.append(read_from_tokens(tokens))
             if len(tokens) == 0: # unclosed expression
                 report_expr = lispstr(L_one_expr)[:-1] + ' _!)_'
-                raise(IndexError(f'Unclosed expression {report_expr}'))
+                raise(SyntaxError(f'Unclosed expression {report_expr}'))
         tokens.pop(0) # pop off ')'
         # TODO the rest of tokens could be used for literate documentation
         # for now would nice to just run them in sequence
@@ -157,19 +157,33 @@ class Env(dict):
         self.update(zip(parms, args))
         self.outer = outer
 
-    def find(self, var):
+    def find_env(self, var, not_found_raises=False):
         "Find the innermost Env where var appears."
-        #pdb.set_trace()
+
         if var in self:
             return self
         elif self.outer is None:
-            # not found name handler hook
-            if "not_found" in self:
-                return self["not_found"](var)
-            raise NameError("Lisp could not find %s" % var)
+            if not_found_raises:
+               raise NameError("Lisp could not find env with %s" % var)
             return None
         else:
-            return self.outer.find(var)
+            return self.outer.find_env(var)
+
+    def find(self, name):
+        "Find the name or handle not found case."
+
+        var_env = self.find_env(name)
+
+        if var_env is None:
+            # not found name handler hook
+            if "not_found" in self:
+                return self["not_found"](name)
+
+            # else - exception
+            raise NameError("Lisp could not find %s" % name)
+
+        else:
+            return var_env[name]
 
 global_env = standard_env()
 class GlobalEnv(Env):
@@ -185,13 +199,7 @@ class GlobalEnv(Env):
         super().__init__()
 
         # populate it with defaults
-        if env is None:
-            self.update(standard_env())
-        elif isinstance(env, Env):
-            self.update(env)
-        else:
-            raise TypeError("wrong content for GlobalEnv: %s" % repr(env))
-
+        self.update(standard_env())
         # populate with root namespace
         self["root_env"] = self
 
@@ -217,12 +225,15 @@ class Procedure(object):
 
 def lisp_eval(x, env=global_env):
     "Evaluate an expression in an environment."
+
     if isinstance(x, Symbol):      # variable reference
         if x == 'dyn_env':
             return env
-        return env.find(x)[x]
+        return env.find(x)
+
     elif not isinstance(x, List):  # constant literal
         return x                
+
     elif x[0] in ('quote', "'"):          # (quote exp)
         (_, exp) = x
         return exp
@@ -236,9 +247,14 @@ def lisp_eval(x, env=global_env):
         env[var] = lisp_eval(exp, env)
         return env[var]
     elif x[0] == 'set!':           # (set! var exp)
-        (_, var, exp) = x
-        env.find(var)[var] = lisp_eval(exp, env)
-        return env.find(var)[var]
+        (_, var_exp, exp) = x
+        var = lisp_eval(var_exp, env) # dynamic name
+
+        var_env = env.find_env(var, not_found_raises=True)
+
+        var_env[var] = lisp_eval(exp, env)
+        return var_env[var]
+
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
         return Procedure(parms, body, env)

@@ -1,4 +1,4 @@
-from sym_lis import GlobalEnv, lispstr, parse
+from sym_lis3 import GlobalEnv, lispstr, parse
 import pytest
 
 
@@ -8,13 +8,15 @@ def test_no_tokens():
     assert g.eval_str("") is None
 
 def test_unknown_name():
-    with pytest.raises(TypeError):
+    with pytest.raises(NameError):
         g.eval_str("(foo 1 2)")
 
 @pytest.mark.parametrize("test_input", [
     (")"),
     ("(+ 2 (* 1 2)))"),
     ("(+ 11 28) 2)"),
+    ("(* 3 4"),
+    ("(unclosed expression"),
 ])
 def test_closing_parenthes(test_input):
     with pytest.raises(SyntaxError):

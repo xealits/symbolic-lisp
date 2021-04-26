@@ -34,7 +34,6 @@ def test_repl_script_lisp():
     assert g.eval_str('') is None
 
 SCRIPT = '''
-(+ 1 2)
 (print "foo" "bar")
 (print (+ ( * 5 44) 2))
 
@@ -55,6 +54,27 @@ def test_repl_script(tmp_path):
     assert res.returncode == 0
     assert b'foo bar\n222\n'   in res.stdout
     assert b'' == res.stderr
+
+SCRIPT1 = '''
+(+ 1 2)
+
+(list "foo" "bar" 3)
+
+'''
+
+def test_repl_script_lispstr(tmp_path):
+    p = tmp_path / 'test_script.lisp'
+    p.write_text(SCRIPT1)
+    assert p.read_text() == SCRIPT1
+    assert len(list(tmp_path.iterdir())) == 1
+
+    comlist = ['./sym_repl.py', '--script', p]
+    script = b''
+    res = subprocess.run(comlist, input=script,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    assert res.returncode == 0
+    assert b'(foo bar 3)'      in res.stdout
 
 BLANK_SCRIPT = '    \n   '
 
