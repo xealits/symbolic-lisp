@@ -11,6 +11,10 @@ def test_repl_session():
     #monkeypatch.setattr('sys.stdin', io.StringIO('(+ 3 5)\n(exit)\n'))
     #res = subprocess.run(comlist,
     #        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    print(res.stdout)
+    print(res.stderr)
+
     assert res.returncode == 0
     assert b'8\n' in res.stdout
     assert res.stderr == b''
