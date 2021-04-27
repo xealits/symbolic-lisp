@@ -1,12 +1,6 @@
-(define "substitute" (lambda (target_name sub expr)
-      (if (list? expr)
-          (map (curry substitute target_name sub) expr)
-          (if (equal? expr target_name)
-              sub
-              expr)
-      )))
-
-(print "try substitute")
-
-(define "substitute_example" (substitute "x" 5 (quote (1 2 x))))
-
+(define "func" (lambda (func_name args body)
+          (define
+              (out (out dyn_env))
+              func_name
+              (nest (out (out dyn_env)) (env (list "_args" "_body") (list args body))))
+      ))
