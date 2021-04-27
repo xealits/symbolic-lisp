@@ -52,6 +52,12 @@
 
 (define 'lambda func)
 
+(define "foo2"
+        (nest root_env
+            (env (list "_args" "_body")
+                 (' (("x" "y") (* (+ 2 x) y)))
+         )))
+
 (func foo (x y) (+ x y))
 
 (func substitute (target_name sub expr)
@@ -62,7 +68,7 @@
               expr)
       ))
 
-(debug "try substitute")
+(print "try substitute")
 
 (define 'substitute_example  (eval_explicit2 "eval_explicit2" 5 (1 2 eval_explicit2)))
 (define 'substitute_example2 (substitute "x" 5 (quote (1 2 x))))

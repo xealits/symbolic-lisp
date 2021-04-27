@@ -9,6 +9,7 @@ import re
 from collections import UserString
 import logging
 import pdb
+from os.path import isfile
 
 from sys import exit
 
@@ -109,6 +110,31 @@ def atom(token):
 
 ################ Environments
 
+def source_file(env, filename):
+    '''source_file(env, filename)
+
+    env where the source in filename will be executed
+    '''
+
+    filename = str(filename)
+    assert isfile(filename)
+    assert isinstance(env, Env)
+
+    with open(filename) as f:
+        script = f.read()
+
+        val = env.eval_str(script)
+        if val is not None:
+            print(lispstr(val))
+
+def make_env(*keys_vals):
+    if len(keys_vals) == 0:
+        return Env()
+    elif len(keys_vals) == 2:
+        return Env(keys_vals[0], keys_vals[1])
+    else:
+        raise ValueError("wrong number of values to unpack for make_env (expected 0 or 1)")
+
 def standard_env():
     "An environment with some Scheme standard procedures."
     env = Env()
@@ -147,9 +173,12 @@ def standard_env():
         'str':     str,
         'join':    lambda d, l: d.join([str(x) for x in l]),
         'in':      lambda env, key: env[key],
-        'env':     lambda keys, vals: Env(keys, vals),
+        'out':     lambda env:      env.outer,
+        'env':     make_env,
         'find':    lambda env, varname: env.find(varname),
+        'find?':   lambda env, varname: env.find_env(varname) is not None,
         'nest':    lambda env_out, env_nested: env_nested.set_outer(env_out),
+        'source':  source_file,
     })
     return env
 
