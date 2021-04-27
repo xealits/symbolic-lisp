@@ -14,14 +14,10 @@ def test_source_lib_chain():
     assert 'bar' in g
     assert 'foo' in g
 
-'''
 def test_source_lib():
     g = GlobalEnv()
     g.eval_str('(source root_env "applications/lib_func.lisp")')
 
-    assert 'func' in g
-    assert 'substitute_example' in g
+    assert g.eval_str('(in? root_env "substitute")')
+    assert g.eval_str('(in? root_env "substitute_example")')
     assert g.eval_str('substitute_example')  == [1, 2, 5]
-    assert g.eval_str('substitute_example2') == \
-           g.eval_str('(quote (1 2 5))')
-'''

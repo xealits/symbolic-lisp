@@ -135,6 +135,11 @@ def make_env(*keys_vals):
     else:
         raise ValueError("wrong number of values to unpack for make_env (expected 0 or 1)")
 
+def curry_func(func, *args):
+    # TODO: this will not work for DIY env-based functions! make them callable?
+    assert callable(func)
+    return lambda *more_args: func(*(args + more_args))
+
 def standard_env():
     "An environment with some Scheme standard procedures."
     env = Env()
@@ -155,7 +160,8 @@ def standard_env():
         'length':  len, 
         'list':    lambda *x: list(x), 
         'list?':   lambda x: isinstance(x,list), 
-        'map':     map,
+        'map':     lambda *x: List(map(*x)),
+        'curry':   curry_func,
         'max':     max,
         'min':     min,
         'not':     op.not_,

@@ -91,6 +91,7 @@ def test_env_lambda_diy():
          )))''')
 
     assert g.eval_str('(foo 3 4)') == g.eval_str('(foo2 3 4)') == 20
+    assert g.eval_str('(in? foo "_args")')
 
 def test_outer_env():
     g = GlobalEnv()
