@@ -48,6 +48,17 @@ def test_define_nested_dynamic():
     g.eval_str('(define "e1" (nest dyn_env (env (list "foo" "bar") (list 2 3))))')
     assert g.eval_str('(find e1 "+")') is g.eval_str('+')
 
+    g.eval_str('(define e1 "ka" (env (list "zzz" "qwe") (list 55 77)))')
+    assert not g.eval_str('(in? root_env "ka")')
+    assert     g.eval_str('(in? e1 "ka")')
+    assert g.eval_str('(in (in e1 "ka") "qwe")') == 77
+
+def test_define_wrong_arity():
+    g = GlobalEnv()
+
+    with pytest.raises(ValueError):
+        g.eval_str('(define "foo" "bar" "e1" "value")')
+
 def test_env_lambda():
     g = GlobalEnv()
 

@@ -253,10 +253,18 @@ def lisp_eval(x, env=None):
         return lisp_eval(exp, env)
 
     elif x[0] == 'define':         # (define var exp)
-        (_, var_exp, exp) = x
+        if len(x) == 3:
+            (_, var_exp, exp) = x
+            where_env = env
+        elif len(x) == 4:
+            (_, where_env_expr, var_exp, exp) = x
+            where_env = lisp_eval(where_env_expr, env)
+        else:
+            raise ValueError("wrong number of values to unpack for define (expected 3 or 4)")
+
         var = lisp_eval(var_exp, env) # dynamic name
-        env[var] = lisp_eval(exp, env)
-        return env[var]
+        where_env[var] = lisp_eval(exp, env)
+        return where_env[var]
 
     elif x[0] == 'set!':           # (set! var exp)
         (_, var_exp, exp) = x
