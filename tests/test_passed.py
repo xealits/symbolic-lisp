@@ -27,6 +27,16 @@ def test_not_found_name():
     with pytest.raises(NameError):
         g.eval_str('foo')
 
+def test_constant_function():
+    g = GlobalEnv()
+
+    g.eval_str('(define "foo" (lambda (x) 3))')
+    assert g.eval_str('(foo 7)') == 3
+    assert g.eval_str('(foo 9)') == 3
+
+    g.eval_str('(define "none" (lambda (x) None))')
+    assert g.eval_str('(none 9)') == None
+
 def test_foo():
     g = GlobalEnv()
     var_foo_addr = g.eval_str('(define "foo" (lambda (x y) (+ 2 (+ x y))))')

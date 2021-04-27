@@ -139,20 +139,24 @@ def standard_env():
         'callable?': callable,
         'round':   round,
         'symbol?': lambda x: isinstance(x, Symbol),
-        'in?':     lambda x, e: x in e,
+        'in?':     lambda e, x: x in e,
         'is?':     lambda x, y: x is y,
         'type?':   type,
         'print':   lambda *x: print(*x),
         'None':    None,
         'str':     str,
         'join':    lambda d, l: d.join([str(x) for x in l]),
+        'in':      lambda env, key: env[key],
+        'env':     lambda keys, vals: Env(keys, vals),
+        'find':    lambda env, varname: env.find(varname),
+        'nest':    lambda env_out, env_nested: env_nested.set_outer(env_out),
     })
     return env
 
 class Env(dict):
     "An environment: a dict of {'var':val} pairs, with an outer Env."
-    def __init__(self, parms=(), args=(), outer=None):
-        self.update(zip(parms, args))
+    def __init__(self, keys=(), vals=(), outer=None):
+        self.update(zip(keys, vals))
         self.outer = outer
 
     def find_env(self, var, not_found_raises=False):
@@ -183,7 +187,10 @@ class Env(dict):
         else:
             return var_env[name]
 
-global_env = standard_env()
+    def set_outer(self, outer_env):
+        self.outer = outer_env
+        return self
+
 class GlobalEnv(Env):
 
     def __init__(self, env=None):
@@ -212,16 +219,20 @@ class GlobalEnv(Env):
 
 ################ Procedures
 
-class Procedure(object):
+def call_env(env, args):
+    return lisp_eval(env['_body'], Env(env['_args'], args, env))
+
+class Procedure(Env):
     "A user-defined Scheme procedure."
     def __init__(self, parms, body, env):
-        self.parms, self.body, self.env = parms, body, env
+        #self.parms, self.body, self.env = parms, body, env
+        super().__init__(('_args', '_body'), (parms, body), env)
     def __call__(self, *args): 
-        return lisp_eval(self.body, Env(self.parms, args, self.env))
+        return lisp_eval(self['_body'], Env(self['_args'], args, self))
 
 ################ eval
 
-def lisp_eval(x, env=global_env):
+def lisp_eval(x, env=None):
     "Evaluate an expression in an environment."
 
     if isinstance(x, Symbol):      # variable reference
@@ -235,28 +246,33 @@ def lisp_eval(x, env=global_env):
     elif x[0] in ('quote', "'"):          # (quote exp)
         (_, exp) = x
         return exp
+
     elif x[0] == 'if':             # (if test conseq alt)
         (_, test, conseq, alt) = x
         exp = (conseq if lisp_eval(test, env) else alt)
         return lisp_eval(exp, env)
+
     elif x[0] == 'define':         # (define var exp)
         (_, var_exp, exp) = x
         var = lisp_eval(var_exp, env) # dynamic name
         env[var] = lisp_eval(exp, env)
         return env[var]
+
     elif x[0] == 'set!':           # (set! var exp)
         (_, var_exp, exp) = x
         var = lisp_eval(var_exp, env) # dynamic name
-
         var_env = env.find_env(var, not_found_raises=True)
-
         var_env[var] = lisp_eval(exp, env)
         return var_env[var]
 
     elif x[0] == 'lambda':         # (lambda (var...) body)
         (_, parms, body) = x
         return Procedure(parms, body, env)
+
     else:                          # (proc arg...)
         proc = lisp_eval(x[0], env)
         args = [lisp_eval(exp, env) for exp in x[1:]]
+
+        if isinstance(proc, Env) and "_args" in proc and "_body" in proc:
+            return call_env(proc, args)
         return proc(*args)
