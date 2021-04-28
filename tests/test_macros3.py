@@ -38,3 +38,31 @@ def test_func():
     assert g.eval_str('(out foo)') is g # root_env
     assert g.eval_str('(foo 2 7)') == 9
 
+def test_macro():
+    g = GlobalEnv()
+
+    g.eval_str('(define "foo" (macro (x y) (list x y)))')
+
+    assert g.eval_str('(foo (a b) (bar (c d)))') == [['a', 'b'], ['bar', ['c', 'd']]]
+
+def test_macro_lambda0():
+    g = GlobalEnv()
+
+    g.eval_str('(define "foo1" (macro (x y) (list x y)))')
+    g.eval_str('(define "foo2" (macro (x y) (list (eval dyn_env x) (eval dyn_env y))))')
+
+    assert g.eval_str('(foo1 (+ 2 3) (* 4 5))') == [['+', 2, 3], ['*', 4, 5]]
+    assert g.eval_str('(foo2 (+ 2 3) (* 4 5))') == [5, 20]
+
+def test_macro_lambda_diy():
+    g = GlobalEnv()
+
+    g.eval_str('''(define "foo"
+        (macro (x y)
+            (begin
+                (set! "x" (eval dyn_env x))
+                (set! "y" (eval dyn_env y))
+                (+ x y))))''')
+
+    assert g.eval_str('(foo (+ 3 5) (* 7 8))') == 64
+

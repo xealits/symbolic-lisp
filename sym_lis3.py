@@ -185,6 +185,7 @@ def standard_env():
         'find?':   lambda env, varname: env.find_env(varname) is not None,
         'nest':    lambda env_out, env_nested: env_nested.set_outer(env_out),
         'source':  source_file,
+        'eval':    lambda env, var: lisp_eval(var, env), # for double-eval
     })
     return env
 
@@ -265,6 +266,9 @@ class Procedure(Env):
     def __call__(self, *args): 
         return lisp_eval(self['_body'], Env(self['_args'], args, self))
 
+class Macro(Procedure):
+    pass
+
 ################ eval
 
 def lisp_eval(x, env=None):
@@ -312,9 +316,17 @@ def lisp_eval(x, env=None):
         (_, parms, body) = x
         return Procedure(parms, body, env)
 
+    elif x[0] == 'macro':         # (lambda (var...) body)
+        (_, parms, body) = x
+        return Macro(parms, body, env)
+
     else:                          # (proc arg...)
         proc = lisp_eval(x[0], env)
-        args = [lisp_eval(exp, env) for exp in x[1:]]
+
+        if isinstance(proc, Macro):
+            args = x[1:]
+        else:
+            args = [lisp_eval(exp, env) for exp in x[1:]]
 
         if isinstance(proc, Env) and "_args" in proc and "_body" in proc:
             return call_env(proc, args)
