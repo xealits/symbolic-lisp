@@ -2,6 +2,11 @@ from sym_lis3 import GlobalEnv
 import pytest
 
 
+def test_input_syntax():
+    g = GlobalEnv()
+    with pytest.raises(ValueError):
+        g.eval_str('(env (list "foo" "bar") (list 2 3) "boo")') == 2
+
 @pytest.mark.parametrize("true_test", [
     ('(in? e0 "foo")'),
     ('(not (in? e0 "+"))'),
