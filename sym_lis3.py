@@ -323,8 +323,10 @@ def lisp_eval(x, env=None):
     else:                          # (proc arg...)
         proc = lisp_eval(x[0], env)
 
+        # do not eval the inputs for macro
         if isinstance(proc, Macro):
             args = x[1:]
+        # eval for regular labdas
         else:
             args = [lisp_eval(exp, env) for exp in x[1:]]
 

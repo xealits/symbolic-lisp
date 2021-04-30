@@ -60,9 +60,49 @@ def test_macro_lambda_diy():
     g.eval_str('''(define "foo"
         (macro (x y)
             (begin
-                (set! "x" (eval dyn_env x))
-                (set! "y" (eval dyn_env y))
+                (print dyn_env (eval (out dyn_env) x))
+                (set! "x" (eval (out dyn_env) x))
+                (set! "y" (eval (out dyn_env) y))
                 (+ x y))))''')
 
     assert g.eval_str('(foo (+ 3 5) (* 7 8))') == 64
+
+    g.eval_str('(define "X" 55)')
+    assert g.eval_str('(foo X (* 7 8))') == 111
+
+    assert g.eval_str('(in? root_env "foo")')
+    assert not g.eval_str('(in? root_env "x")')
+
+    g.eval_str('(define "x" 45)')
+    assert g.eval_str('(foo x (* 7 8))') == 101
+
+def test_macro_lambda_diy_func():
+    g = GlobalEnv()
+
+    g.eval_str('''(define "func" (macro (func_name args body)
+          (define
+              (out (out dyn_env))
+              func_name
+              (nest (out (out dyn_env)) (env (list "_args" "_body") (list args body))))
+      ))''')
+
+    g.eval_str('(func foo (x y) (+ x y))')
+
+    # signature
+    assert g.eval_str('(in? root_env "foo")')
+    assert g.eval_str('(in foo "_args")') == ['x', 'y']
+    assert g.eval_str('(in foo "_body")') == ['+', 'x', 'y']
+
+    # action
+    assert g.eval_str('(foo (+ 3 5) (* 7 8))') == 64
+
+    g.eval_str('(define "X" 55)')
+    assert g.eval_str('(foo X (* 7 8))') == 111
+
+    assert g.eval_str('(in? root_env "foo")')
+    assert not g.eval_str('(in? root_env "x")')
+
+    g.eval_str('(define "x" 45)')
+    assert g.eval_str('(foo x (* 7 8))') == 101
+
 
