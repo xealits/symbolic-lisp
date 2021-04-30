@@ -67,9 +67,18 @@ def read_all_from_tokens(tokens):
 
     all_expr = []
     while tokens:
-        an_expr = read_from_tokens(tokens)
-        # read_from_tokens pops the expression from tokens
-        all_expr.append(an_expr)
+
+        try:
+            an_expr = read_from_tokens(tokens)
+            # read_from_tokens pops the expression from tokens
+            all_expr.append(an_expr)
+
+        except SyntaxError as err:
+            print("Currenlty parsed expressions:")
+            for expr in all_expr:
+                print(expr)
+
+            raise err
 
     return all_expr
 
@@ -175,9 +184,11 @@ def standard_env():
         'is?':     lambda x, y: x is y,
         'type?':   type,
         'print':   lambda *x: print(*x),
+        'debug':   lambda *x: logging.debug(*x),
         'None':    None,
         'str':     str,
         'join':    lambda d, l: d.join([str(x) for x in l]),
+        'double_quote': '"',
         'in':      lambda env, key: env[key],
         'out':     lambda env:      env.outer,
         'env':     make_env,

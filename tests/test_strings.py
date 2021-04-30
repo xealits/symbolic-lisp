@@ -23,3 +23,11 @@ def test_print_parentheses():
 def test_join_string(test_input, expected):
     g = GlobalEnv()
     assert g.eval_str(test_input) == expected
+
+def test_quotation_mark():
+    g = GlobalEnv()
+
+    g.eval_str('''(define "foo" (join (str) (list double_quote "Hello world!"
+            double_quote )))''')
+
+    assert g.eval_str('foo') == '"Hello world!"'

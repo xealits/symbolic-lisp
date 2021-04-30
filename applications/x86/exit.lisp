@@ -1,13 +1,13 @@
-(source 'x86.lisp)
+(source root_env "x86.lisp")
 
 (.data)
-(.ascii "Hello,_world\0")
+(.ascii (join (str) (list double_quote "Hello,_world\0" double_quote)))
 
 (.text)
-(.globl '_start)
+(.globl "_start")
 
-(label '_start)
+(label "_start")
 
-(movl '$12 ebx)
-(movl '$1  eax)
+(movl "$12" ebx)
+(movl "$1"  eax)
 (interrupt_to KERNEL)
