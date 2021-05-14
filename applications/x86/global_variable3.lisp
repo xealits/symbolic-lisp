@@ -11,4 +11,4 @@
 (quote ( ; foo
 ))
 
-(exit_to_kernel (address_byte "variable" 1))
+(exit_to_kernel (address_var_byte "variable" 1))

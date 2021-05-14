@@ -3,7 +3,7 @@
 #   ld global_variable.o
 #   ./a.out 
 
-all: global_variable3.out exit.out qexit.out max.out hello_world.out
+all: global_variable3.out exit.out qexit.out max.out hello_world.out strlen_lib.lisp
 
 #./sym_repl.py --script applications/x86/exit_test.lisp
 

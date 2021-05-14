@@ -21,6 +21,9 @@
 
 (func movl  (x y) (two_operand_instruction "movl" x y))
 (func mov   (x y) (two_operand_instruction "mov"  x y))
+(func xor   (x y) (two_operand_instruction "xor" x y))
+(func cmp   (x y) (two_operand_instruction "cmp"  x y))
+(func cmpb  (x y) (two_operand_instruction "cmpb" x y))
 (func cmpl  (x y) (two_operand_instruction "cmpl" x y))
 (func popq  (x)   (one_operand_instruction "popq" x))
 (func pushq (x)   (one_operand_instruction "push" x))
@@ -29,6 +32,7 @@
 (func je    (op)  (one_operand_instruction "je"   op))
 (func jle   (x)   (one_operand_instruction "jle"  x))
 (func jmp   (x)   (one_operand_instruction "jmp"  x))
+(func inc   (x)   (one_operand_instruction "inc"  x))
 (func incl  (x)   (one_operand_instruction "incl" x))
 
 (func ret     () (print "ret"))
@@ -47,12 +51,20 @@
 	probably its language constructions too?
 	))
 
-(func address_byte  (init_address relative_offset)
+(func address_var_byte  (init_address relative_offset)
 	(join (str) (list "(" init_address "+" relative_offset ")"))
 	)
-(func address_word  (init_address relative_offset) (address_byte init_address (* 2 relative_offset)))
-(func address_dword (init_address relative_offset) (address_byte init_address (* 4 relative_offset)))
-(func address_qword (init_address relative_offset) (address_byte init_address (* 8 relative_offset)))
+(func address_var_word  (init_address relative_offset) (address_var_byte init_address (* 2 relative_offset)))
+(func address_var_dword (init_address relative_offset) (address_var_byte init_address (* 4 relative_offset)))
+(func address_var_qword (init_address relative_offset) (address_var_byte init_address (* 8 relative_offset)))
+
+(func address  (init_address relative_offset num_bytes)
+	(join (str) (list "(" init_address "," relative_offset "," num_bytes ")"))
+	)
+(func address_byte  (init_address relative_offset) (address init_address relative_offset 1))
+(func address_word  (init_address relative_offset) (address init_address relative_offset 2))
+(func address_dword (init_address relative_offset) (address init_address relative_offset 4))
+(func address_qword (init_address relative_offset) (address init_address relative_offset 8))
 
 (quote ( registers ))
 
