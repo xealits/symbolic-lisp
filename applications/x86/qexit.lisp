@@ -1,5 +1,7 @@
 (source root_env "x86.lisp")
 
+(define "prog" (list
+
 (.data)
 (.ascii (join (str) (list double_quote "Hello,_world\0" double_quote)))
 
@@ -9,8 +11,12 @@
 (label "_start")
 
 
-(quote (movl esp ebx
+(comment (movl esp ebx
 (exit_to_kernel "$0")
 ))
 
 (exit_to_kernel esp)
+
+))
+
+(print_prog prog)

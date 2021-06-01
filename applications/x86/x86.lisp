@@ -1,23 +1,35 @@
 (source root_env "../lib_func.lisp")
 
-(func .section (name) (print ".section" name))
+(define "comment" (macro (comment) None))
+
+(define "print_prog" (lambda (p)
+	  (if (list? p)
+		(map print_prog p)
+		(if (is? p None)
+		  None
+		  (print (newlineit p))
+		)
+	  )
+))
+
+(func .section (name) (format "%s %s" ".section" name))
 (func .rodata  () (.section  ".rodata"))
 (func .data    () (.section  ".data"))
 (func .text    () (.section  ".text"))
 
-(func .globl  (name) (print ".globl"  name))
-(func .global (name) (print ".global" name))
+(func .globl  (name) (format "%s %s" ".globl"  name))
+(func .global (name) (format "%s %s" ".global" name))
 
-(func label  (name) (print (+ name ":")))
+(func label  (name) (format "%s:" name))
 
-(func .ascii (text) (print ".ascii" text))
-(func .long  (text) (print ".long"  text))
+(func .ascii (text) (format "%s %s" ".ascii" text))
+(func .long  (text) (format "%s %s" ".long"  text))
 
 
 (quote (the instructions))
 
-(func one_operand_instruction (name x)   (print name x))
-(func two_operand_instruction (name x y) (print name x "," y))
+(func one_operand_instruction (name x)   (format "%s %s" name x))
+(func two_operand_instruction (name x y) (format "%s %s, %s" name x y))
 
 (func movl  (x y) (two_operand_instruction "movl" x y))
 (func mov   (x y) (two_operand_instruction "mov"  x y))
@@ -35,8 +47,8 @@
 (func inc   (x)   (one_operand_instruction "inc"  x))
 (func incl  (x)   (one_operand_instruction "incl" x))
 
-(func ret     () (print "ret"))
-(func syscall () (print "syscall"))
+(func ret     () "ret")
+(func syscall () "syscall")
 
 (func address1 (addr_label reg_index offset)
 	(join (str) (list addr_label "(" "," reg_index "," offset ")"))
@@ -93,7 +105,7 @@
 (quote (
 ))
 
-(func call (symbolname) (print "call" symbolname))
+(func call (symbolname) (format "%s %s" "call" symbolname))
 
 
 (quote (
@@ -102,9 +114,9 @@
 	))
 
 (func static_variable (type varname data)
-	(begin
-		(print (+ varname ":"))
-		(print type (if (list? data) (join "," data) data)))
+	(+
+		(format "%s:\n" varname)
+		(format "%s %s" type (if (list? data) (join "," data) data)))
 	)
 (quote(
 	; FIXME: type must be passed as a function and run it
@@ -120,7 +132,7 @@
 
 (func interrupt_to   (code) (one_operand_instruction "int" code))
 (func exit_to_kernel (exit_code)
-	(begin (movl exit_code ebx) (movl "$1" eax) (interrupt_to KERNEL))
+	(format "%s\n%s\n%s" (movl exit_code ebx) (movl "$1" eax) (interrupt_to KERNEL))
 )
 
 (debug "sourced x86.lisp")

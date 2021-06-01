@@ -9,34 +9,44 @@
 		 then make some dependancy system between them))
 
 
+(func def_exit () (list
+
+(.text)
 
 (label "exit")
 
-(' ( exit process
+(comment ( exit process
      input: rdi
 	 returns it as the exit code))
 
-(' ( 32 bit exit
+(comment ( 32 bit exit
 (movl   rdi ebx)
-(movl "$1"  eax)    (' (exit system call number))
+(movl "$1"  eax)    (comment (exit system call number))
 (interrupt_to KERNEL)
 ))
 
-(' ((mov   rdi ebx) 64 bit grabs exit code from rdi))
+(comment ((mov   rdi ebx) 64 bit grabs exit code from rdi))
 
-(mov "$60"  rax)    (' (exit system call number))
+(mov "$60"  rax)    (comment (exit system call number))
 (syscall)
+" "
+))
 
+
+
+(func def_string_length () (list
+
+(.text)
 
 (label "string_length")
 
-(' ( calculate the length of the string given by a pointer
+(comment ( calculate the length of the string given by a pointer
 
      input: rdi -- pointer
 
 	 returns the lenth in rax))
 
-(xor rax rax)    (' (it is the return register, init to 0 and increment for each string character))
+(xor rax rax)    (comment (it is the return register, init to 0 and increment for each string character))
 
 (label ".loop")
 
@@ -44,7 +54,7 @@
 
 (je ".end")
 
-(' (TODO
+(comment (TODO
 	 .end symbol must return ".end"
 	 how to get .end if it is defined later?))
 
@@ -53,3 +63,7 @@
 
 (label ".end")
 (ret)
+" "
+))
+
+None
