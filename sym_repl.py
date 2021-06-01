@@ -5,6 +5,7 @@ import logging
 #import readline # it blocks rlwrap
 from textwrap import dedent
 from os.path import isfile
+import sys
 
 from sym_lis3 import GlobalEnv, parse, List, lispstr
 
@@ -72,8 +73,9 @@ if __name__ == '__main__':
                 logging.warning("the script file is empty: %s" % args.script)
 
             val = g.eval_str(script)
+            # print final value of the script
             if val is not None:
-                print(lispstr(val))
+                print(lispstr(val), file=sys.stderr)
 
     else:
         repl()

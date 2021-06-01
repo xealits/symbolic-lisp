@@ -11,6 +11,7 @@ import logging
 import pdb
 from os.path import isfile
 
+import sys
 from sys import exit
 
 ################ Types
@@ -19,7 +20,7 @@ from sys import exit
 class Symbol(UserString):
     pass
 
-class String(UserString):
+class String(str): #(UserString):
     pass
 
 List   = list         # A Lisp List is implemented as a Python list
@@ -170,6 +171,7 @@ def standard_env():
         'list':    lambda *x: list(x), 
         'list?':   lambda x: isinstance(x,list), 
         'map':     lambda *x: List(map(*x)),
+        'format':  lambda f, *x: f % x,
         'curry':   curry_func,
         'max':     max,
         'min':     min,
@@ -183,6 +185,8 @@ def standard_env():
         'in?':     lambda e, x: x in e,
         'is?':     lambda x, y: x is y,
         'type?':   type,
+        '_sys':    sys,
+        '_getattr': lambda x, attr: getattr(x, attr),
         'print':   lambda *x: print(*x),
         'debug':   lambda *x: logging.debug(*x),
         'None':    None,

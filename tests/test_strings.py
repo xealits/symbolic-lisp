@@ -31,3 +31,9 @@ def test_quotation_mark():
             double_quote )))''')
 
     assert g.eval_str('foo') == '"Hello world!"'
+
+def test_format():
+    g = GlobalEnv()
+
+    assert g.eval_str('(format "%s %s" "foo" "bar")') == 'foo bar'
+

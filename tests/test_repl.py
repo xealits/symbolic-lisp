@@ -75,7 +75,7 @@ def test_repl_script_lispstr(tmp_path):
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     assert res.returncode == 0
-    assert b'(foo bar 3)'      in res.stdout
+    assert b'(foo bar 3)'      not in res.stdout
 
 BLANK_SCRIPT = '    \n   '
 
