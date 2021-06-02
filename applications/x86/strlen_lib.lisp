@@ -12,13 +12,24 @@
 (.globl "_start")
 (label "_start")
 
-(mov "$string_variable" rdi)
-(call "string_length")    (comment 1)
+(mov string_variable rdi)
+(call _string_length)
 
 (mov rax rdi)
-(call "exit")             (comment (so this and 1 must pull the definitions like exit from the lib))
+(call _exit)
 
 
 ))
+
+(comment (
+there are 2 ways to do it:
+1. explicitly manually def the functions you need from a lib
+   and def some handy symbol that is invoked in (call <func_symbol>)
+2. do it automatically: source lib is like from x import *
+   but the compiler finds the minimal complete tree from the sources
+   - it is C style plus the minimal complete tree resolution
+
+explicit way is better
+but C way is handy))
 
 (print_prog prog)

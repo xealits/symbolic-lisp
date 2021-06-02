@@ -9,7 +9,9 @@
 		 then make some dependancy system between them))
 
 
-(func def_exit () (list
+(func def_exit () (begin
+(define (out (out dyn_env)) "_exit" "exit")
+(list
 
 (.text)
 
@@ -30,11 +32,13 @@
 (mov "$60"  rax)    (comment (exit system call number))
 (syscall)
 " "
-))
+)))
 
 
 
-(func def_string_length () (list
+(func def_string_length () (begin
+(define (out (out dyn_env)) "_string_length" "string_length")
+(list
 
 (.text)
 
@@ -64,6 +68,6 @@
 (label ".end")
 (ret)
 " "
-))
+)))
 
 None

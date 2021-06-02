@@ -114,10 +114,12 @@
 	))
 
 (func static_variable (type varname data)
+  (begin
+    (define (out (out dyn_env)) varname (format "$%s" varname))
 	(+
 		(format "%s:\n" varname)
 		(format "%s %s" type (if (list? data) (join "," data) data)))
-	)
+  ))
 (quote(
 	; FIXME: type must be passed as a function and run it
 	))

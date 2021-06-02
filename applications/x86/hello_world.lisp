@@ -41,7 +41,7 @@ syscall                  ; this instruction invokes a system call
 
 (mov "$1" rax)
 (mov "$1" rdi)
-(mov "$message" rsi)
+(mov message rsi)
 (mov "$14" rdx)
 (syscall)
 
