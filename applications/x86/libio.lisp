@@ -29,7 +29,7 @@
 
 (comment ((mov   rdi ebx) 64 bit grabs exit code from rdi))
 
-(mov "$60"  rax)    (comment (exit system call number))
+(mov "$60"  rax)    (comment (exit system call number, exit code must be in rdi))
 (syscall)
 " "
 )))
@@ -69,5 +69,43 @@
 (ret)
 " "
 )))
+
+
+
+
+
+
+(func def_print_string () (begin
+(comment (print null-terminated string to stdout via write syscall
+     input: rdi -- pointer
+     returns nothing
+     ))
+
+(define (out (out dyn_env)) "_print_string" "print_string")
+
+(list
+  (comment (string length of the null-terminated array for the write syscall))
+  (if (find? dyn_env "_string_length")
+	None
+	(def_string_length)
+	)
+
+  (.text)
+  (label "print_string")
+
+  (comment (rdi already contains the pointer to the string))
+  (call _string_length)   (comment (output -> rax))
+
+  (comment (syscall arguments))
+  (mov rax rdx)  (comment (length of the string))
+  (mov rdi rsi)  (comment (the func input in rdi -> rsi for the syscall))
+
+  (mov "$1" rax)
+  (mov "$1" rdi)
+  (syscall)
+  (ret)
+  )
+
+))
 
 None

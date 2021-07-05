@@ -150,6 +150,9 @@ def curry_func(func, *args):
     assert callable(func)
     return lambda *more_args: func(*(args + more_args))
 
+def assert_check(var):
+    assert var
+
 def standard_env():
     "An environment with some Scheme standard procedures."
     env = Env()
@@ -203,6 +206,7 @@ def standard_env():
         'nest':    lambda env_out, env_nested: env_nested.set_outer(env_out),
         'source':  source_file,
         'eval':    lambda env, var: lisp_eval(var, env), # for double-eval
+        'assert':  lambda bool_val: assert_check(bool_val), # TODO: if not, print lisp stack?
     })
     return env
 
@@ -266,8 +270,25 @@ class GlobalEnv(Env):
 
     def eval_str(self, string):
         res = None
-        for expr in parse(string):
-            res = self.eval(expr)
+        exprs = parse(string)
+
+        for i, expr in enumerate(exprs):
+            try:
+                # this will never work, because lisp_eval catches the exception
+                # but it would be good to get it working
+                # because this place has reference to the rest of the source code
+                res = self.eval(expr)
+
+            except Exception as e:
+                # print the previous expressions in the string
+                for prev_expr in exprs[:i]:
+                    print(prev_expr, file=sys.stderr)
+
+                # and the current one with some stack?
+                print(expr, file=sys.stderr)
+
+                raise e
+
         return res
 
 ################ Procedures
@@ -291,62 +312,79 @@ class Macro(Procedure):
 def lisp_eval(x, env=None):
     "Evaluate an expression in an environment."
 
-    if isinstance(x, Symbol):      # variable reference
-        if x == 'dyn_env':
-            return env
-        return env.find(x)
+    try:
 
-    elif not isinstance(x, List):  # constant literal
-        return x                
+        if isinstance(x, Symbol):      # variable reference
+            if x == 'dyn_env':
+                return env
+            return env.find(x)
 
-    elif x[0] in ('quote', "'"):          # (quote exp)
-        (_, exp) = x
-        return exp
+        elif not isinstance(x, List):  # constant literal
+            return x                
 
-    elif x[0] == 'if':             # (if test conseq alt)
-        (_, test, conseq, alt) = x
-        exp = (conseq if lisp_eval(test, env) else alt)
-        return lisp_eval(exp, env)
+        elif x[0] in ('quote', "'"):          # (quote exp)
+            (_, exp) = x
+            return exp
 
-    elif x[0] == 'define':         # (define var exp)
-        if len(x) == 3:
+        elif x[0] == 'if':             # (if test conseq alt)
+            (_, test, conseq, alt) = x
+            exp = (conseq if lisp_eval(test, env) else alt)
+            return lisp_eval(exp, env)
+
+        elif x[0] == 'define':         # (define var exp)
+            if len(x) == 3:
+                (_, var_exp, exp) = x
+                where_env = env
+            elif len(x) == 4:
+                (_, where_env_expr, var_exp, exp) = x
+                where_env = lisp_eval(where_env_expr, env)
+            else:
+                raise ValueError("wrong number of values to unpack for define (expected 3 or 4)")
+
+            var = lisp_eval(var_exp, env) # dynamic name
+            where_env[var] = lisp_eval(exp, env)
+            return where_env[var]
+
+        elif x[0] == 'set!':           # (set! var exp)
             (_, var_exp, exp) = x
-            where_env = env
-        elif len(x) == 4:
-            (_, where_env_expr, var_exp, exp) = x
-            where_env = lisp_eval(where_env_expr, env)
-        else:
-            raise ValueError("wrong number of values to unpack for define (expected 3 or 4)")
+            var = lisp_eval(var_exp, env) # dynamic name
+            var_env = env.find_env(var, not_found_raises=True)
+            var_env[var] = lisp_eval(exp, env)
+            return var_env[var]
 
-        var = lisp_eval(var_exp, env) # dynamic name
-        where_env[var] = lisp_eval(exp, env)
-        return where_env[var]
+        elif x[0] == 'lambda':         # (lambda (var...) body)
+            (_, parms, body) = x
+            return Procedure(parms, body, env)
 
-    elif x[0] == 'set!':           # (set! var exp)
-        (_, var_exp, exp) = x
-        var = lisp_eval(var_exp, env) # dynamic name
-        var_env = env.find_env(var, not_found_raises=True)
-        var_env[var] = lisp_eval(exp, env)
-        return var_env[var]
+        elif x[0] == 'macro':         # (lambda (var...) body)
+            (_, parms, body) = x
+            return Macro(parms, body, env)
 
-    elif x[0] == 'lambda':         # (lambda (var...) body)
-        (_, parms, body) = x
-        return Procedure(parms, body, env)
+        else:                          # (proc arg...)
+            proc = lisp_eval(x[0], env)
 
-    elif x[0] == 'macro':         # (lambda (var...) body)
-        (_, parms, body) = x
-        return Macro(parms, body, env)
+            # do not eval the inputs for macro
+            if isinstance(proc, Macro):
+                args = x[1:]
+            # eval for regular labdas
+            else:
+                args = [lisp_eval(exp, env) for exp in x[1:]]
 
-    else:                          # (proc arg...)
-        proc = lisp_eval(x[0], env)
+            if isinstance(proc, Env) and "_args" in proc and "_body" in proc:
+                return call_env(proc, args)
+            return proc(*args)
 
-        # do not eval the inputs for macro
-        if isinstance(proc, Macro):
-            args = x[1:]
-        # eval for regular labdas
-        else:
-            args = [lisp_eval(exp, env) for exp in x[1:]]
+    except Exception as e:
+        # print the current call tree
+        #print('---------- CURRENT CALL TREE ----------', file=sys.stderr)
+        print(x, file=sys.stderr)
 
-        if isinstance(proc, Env) and "_args" in proc and "_body" in proc:
-            return call_env(proc, args)
-        return proc(*args)
+        #curr_env = env
+        #nesting = 1
+        #while curr_env is not None:
+
+        #    print("  "*nesting + str(curr_env.keys()), file=sys.stderr)
+        #    nesting += 1
+        #    curr_env = curr_env.outer
+
+        raise e
