@@ -198,6 +198,7 @@ def standard_env():
         'str':     str,
         'join':    lambda d, l: d.join([str(x) for x in l]),
         'double_quote': '"',
+        'single_quote': "'",
         'in':      lambda env, key: env[key],
         'out':     lambda env:      env.outer,
         'env':     make_env,

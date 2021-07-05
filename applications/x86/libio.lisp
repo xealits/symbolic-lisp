@@ -97,7 +97,7 @@
   (call _string_length)   (comment (output -> rax))
 
   (comment (syscall arguments))
-  (mov rax rdx)  (comment (length of the string))
+  (mov rax rdx)  (comment (length, number of bytes in the string))
   (mov rdi rsi)  (comment (the func input in rdi -> rsi for the syscall))
 
   (mov "$1" rax)
@@ -107,5 +107,61 @@
   )
 
 ))
+
+
+(func def_print_char () (begin
+(comment (print_char Accepts a character code directly as its first argument and prints it to stdout.
+     input: rdi -- char code
+     returns nothing
+     ))
+
+(define (out (out dyn_env)) "_print_char" "print_char")
+
+(list
+  (.text)
+  (label "print_char")
+
+  (comment (push the character on the stack to pass the stack pointer to the syscall))
+  (push rdi)     (comment (it will push 64 bits, let's hope the syscall will get the correct 8 bits))
+
+  (comment (syscall arguments))
+  (mov "$1" rdx)  (comment (only 1 byte to write))
+  (mov rsp rsi)   (comment (the stack pointer points to the char code))
+
+  (mov "$1" rax)
+  (mov "$1" rdi)
+  (syscall)
+  (pop rdi)       (comment (clear the stack))
+  (ret)
+  )
+
+))
+
+
+
+(func def_print_newline () (begin
+(comment (print_newline  prints 0x0A to stdout.
+     input: rdi -- char code
+     returns nothing
+     ))
+
+(define (out (out dyn_env)) "_print_newline" "print_newline")
+
+(list
+  (.text)
+  (label "print_newline")
+  (comment (use print_char))
+  (if (find? dyn_env "_print_char")
+	None
+	(def_print_char)
+	)
+
+  (mov "$10" rdi)
+  (call _print_char)
+  (ret)
+  )
+
+))
+
 
 None

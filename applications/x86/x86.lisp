@@ -37,10 +37,14 @@
 (func cmp   (x y) (two_operand_instruction "cmp"  x y))
 (func cmpb  (x y) (two_operand_instruction "cmpb" x y))
 (func cmpl  (x y) (two_operand_instruction "cmpl" x y))
+
+(func pop   (x)   (one_operand_instruction "pop"  x))
+(func push  (x)   (one_operand_instruction "push" x))
 (func popq  (x)   (one_operand_instruction "popq" x))
 (func pushq (x)   (one_operand_instruction "push" x))
 (func popl  (x)   (one_operand_instruction "popl"  x))
 (func pushl (x)   (one_operand_instruction "pushl" x))
+
 (func je    (op)  (one_operand_instruction "je"   op))
 (func jle   (x)   (one_operand_instruction "jle"  x))
 (func jmp   (x)   (one_operand_instruction "jmp"  x))
