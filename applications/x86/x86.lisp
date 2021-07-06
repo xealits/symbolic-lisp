@@ -48,8 +48,14 @@
 (func je    (op)  (one_operand_instruction "je"   op))
 (func jle   (x)   (one_operand_instruction "jle"  x))
 (func jmp   (x)   (one_operand_instruction "jmp"  x))
+
+(func dec   (x)   (one_operand_instruction "dec"  x))
 (func inc   (x)   (one_operand_instruction "inc"  x))
 (func incl  (x)   (one_operand_instruction "incl" x))
+
+(func div  (x)     (one_operand_instruction "div" x))
+(func sub  (x y)   (two_operand_instruction "sub" x y))
+(func add  (x y)   (two_operand_instruction "add" x y))
 
 (func ret     () "ret")
 (func syscall () "syscall")
@@ -82,6 +88,14 @@
 (func address_dword (init_address relative_offset) (address init_address relative_offset 4))
 (func address_qword (init_address relative_offset) (address init_address relative_offset 8))
 
+(func address_regs  (init_reg offset_reg step)
+	(join (str) (list "(" init_reg "," offset_reg "," step ")"))
+	)
+
+(func address_reg_relative  (init_reg offset)
+	(join (str) (list offset "(" init_reg ")"))
+	)
+
 (quote ( registers ))
 
 (define "def_reg_att" (macro (reg_name) (define root_env (str reg_name) (+ "%" (str reg_name)))))
@@ -95,6 +109,11 @@
 
 (def_reg_att rax)
 (def_reg_att rdx)
+(def_reg_att  dx)
+(def_reg_att  dh)
+(def_reg_att  dl)
+
+(def_reg_att rcx)
 
 (def_reg_att esp)
 (def_reg_att ebp)
@@ -105,6 +124,12 @@
 
 (def_reg_att rdi)
 (def_reg_att rsi)
+
+(def_reg_att r8)
+(def_reg_att r9)
+(def_reg_att r10)
+
+(comment (function inputs order: rdi, rsi, rcx, r8, r9))
 
 (quote (
 ))

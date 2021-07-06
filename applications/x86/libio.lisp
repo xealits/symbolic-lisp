@@ -104,6 +104,7 @@
   (mov "$1" rdi)
   (syscall)
   (ret)
+  " "
   )
 
 ))
@@ -133,6 +134,7 @@
   (syscall)
   (pop rdi)       (comment (clear the stack))
   (ret)
+  " "
   )
 
 ))
@@ -148,20 +150,103 @@
 (define (out (out dyn_env)) "_print_newline" "print_newline")
 
 (list
-  (.text)
-  (label "print_newline")
   (comment (use print_char))
   (if (find? dyn_env "_print_char")
 	None
 	(def_print_char)
 	)
 
+  (.text)
+  (label "print_newline")
+
   (mov "$10" rdi)
   (call _print_char)
   (ret)
+  " "
   )
 
 ))
 
+
+(func def_print_uint () (begin
+(comment (
+    print_uint Outputs an unsigned 8-byte integer in decimal format.
+
+    We suggest you create a buffer on the stack and store the division results there. Each
+    time you divide the last value by and store the corresponding digit inside the
+    buffer. Do not forget, that you should transform each digit into its ASCII code
+    (e.g., 0x04 becomes 0x34).
+
+	div "$10"
+	Unsigned divide RDX:RAX by r/m64, with
+    result stored in RAX ← Quotient, RDX ←
+    Remainder.
+
+    input: rdi -- uint to print
+    returns nothing
+    ))
+
+(define (out (out dyn_env)) "_print_uint" "print_uint")
+
+(list
+  (.text)
+  (label "print_uint")
+
+  (comment (div input))
+  (mov rdi rax)
+  (xor rdx rdx)
+
+  (comment ((xor rcx rcx) rcx and r11 are modified by the syscall instruction))
+  (xor r9 r9)    (comment (counter of digits))
+  (mov "$10" r8) (comment (divider))
+
+  (comment (the place for the byte buffer on the stack))
+  (comment (
+  (mov rsp  r10) 
+  (sub "$8" r10)
+  (define "buffer_length" "$16")
+  (sub buffer_length r10)
+  ))
+  (mov rsp r10) 
+  (dec r10)
+
+  (label ".loop_digit")
+
+  (comment ((div "$10") does div by literal work?
+                        no:
+                        Error: operand type mismatch for `div'))
+
+  (div r8)
+  (comment (don't push-pop the stack - just address it mov %cl, (%esi,%eax,1)))
+  (add "$0x30" dl)
+  (mov dl (address_reg_relative r10 0))
+
+  (comment ((push  rdx)   manual has no way to push only 1 byte... so how will it work?))
+
+  (inc r9)
+
+  (comment (if nothing is left in rax - done, else loop))
+  (cmp "$0" rax)
+  (je ".end")
+
+  (xor rdx rdx)
+  (dec r10)
+  (jmp ".loop_digit")
+
+  (label ".end")
+  (comment (syscall arguments))
+  (mov r9  rdx)  (comment (length, number of bytes in the string))
+  (mov r10 rsi)  (comment (the pointer to the beginning of the string))
+
+  (mov "$1" rax) (comment (write syscall number))
+  (mov "$1" rdi) (comment (the output fd, stdout=1))
+  (syscall)
+
+  (comment ((sub r9 rsp) no need to clear the stack))
+  (ret)
+  " "
+  )
+
+))
 
 None
