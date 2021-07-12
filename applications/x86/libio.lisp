@@ -6,7 +6,7 @@
 
 
 (' (TODO make these lisp functions, so that they are not just copied to assembly, but pulled by lisp
-		 then make some dependancy system between them))
+         then make some dependancy system between them))
 
 
 (func def_exit () (begin
@@ -19,7 +19,7 @@
 
 (comment ( exit process
      input: rdi
-	 returns it as the exit code))
+     returns it as the exit code))
 
 (comment ( 32 bit exit
 (movl   rdi ebx)
@@ -68,7 +68,7 @@
 
      input: rdi -- pointer
 
-	 returns the lenth in rax))
+     returns the lenth in rax))
 
 (xor rax rax)    (comment (it is the return register, init to 0 and increment for each string character))
 
@@ -77,7 +77,7 @@
     (cmpb "$0" (address_byte rdi rax))
     (je loop_end)
     (inc rax)
-	)
+    )
 
   ( (ret) )
   )
@@ -101,9 +101,9 @@
 (list
   (comment (string length of the null-terminated array for the write syscall))
   (if (find? dyn_env "_string_length")
-	None
-	(def_string_length)
-	)
+    None
+    (def_string_length)
+    )
 
   (.text)
   (label "print_string")
@@ -167,9 +167,9 @@
 (list
   (comment (use print_char))
   (if (find? dyn_env "_print_char")
-	None
-	(def_print_char)
-	)
+    None
+    (def_print_char)
+    )
 
   (.text)
   (label "print_newline")
@@ -192,8 +192,8 @@
     buffer. Do not forget, that you should transform each digit into its ASCII code
     (e.g., 0x04 becomes 0x34).
 
-	div "$10"
-	Unsigned divide RDX:RAX by r/m64, with
+    div "$10"
+    Unsigned divide RDX:RAX by r/m64, with
     result stored in RAX ← Quotient, RDX ←
     Remainder.
 
@@ -219,40 +219,44 @@
   (mov rsp r10) 
   (dec r10)
 
-  (label ".loop_digit")
+  (loop "_digit"
 
-  (comment ((div "$10") does div by literal work?
-                        no:
-                        Error: operand type mismatch for `div'))
+      (
+      (comment ((div "$10") does div by literal work?
+                            no:
+                            Error: operand type mismatch for `div'))
 
-  (div r8)
-  (comment (don't push-pop the stack - just address it mov %cl, (%esi,%eax,1)))
-  (add "$0x30" dl)
-  (mov dl (address_reg_relative r10 0))
+      (div r8)
+      (comment (don't push-pop the stack - just address it mov %cl, (%esi,%eax,1)))
+      (add "$0x30" dl)
+      (mov dl (address_reg_relative r10 0))
 
-  (comment ((push  rdx)   manual has no way to push only 1 byte... so how will it work?))
+      (comment ((push  rdx)   manual has no way to push only 1 byte... so how will it work?))
 
-  (inc r9)
+      (inc r9)
 
-  (comment (if nothing is left in rax - done, else loop))
-  (cmp "$0" rax)
-  (je ".end")
+      (comment (if nothing is left in rax - done, else loop))
+      (cmp "$0" rax)
+      (je loop_end)
 
-  (xor rdx rdx)
-  (dec r10)
-  (jmp ".loop_digit")
+      (xor rdx rdx)
+      (dec r10)
+      )
 
-  (label ".end")
-  (comment (syscall arguments))
-  (mov r9  rdx)  (comment (length, number of bytes in the string))
-  (mov r10 rsi)  (comment (the pointer to the beginning of the string))
+      (
+      (comment (syscall arguments))
+      (mov r9  rdx)  (comment (length, number of bytes in the string))
+      (mov r10 rsi)  (comment (the pointer to the beginning of the string))
 
-  (mov "$1" rax) (comment (write syscall number))
-  (mov "$1" rdi) (comment (the output fd, stdout=1))
-  (syscall)
+      (mov "$1" rax) (comment (write syscall number))
+      (mov "$1" rdi) (comment (the output fd, stdout=1))
+      (syscall)
 
-  (comment ((sub r9 rsp) no need to clear the stack))
-  (ret)
+      (comment ((sub r9 rsp) no need to clear the stack))
+      (ret)
+      )
+  )
+
   " "
   )
 
