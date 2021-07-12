@@ -36,6 +36,26 @@
 
 
 
+(define "loop" (macro (name body end)
+(begin
+  (assert (string? name))
+  (assert (list?   body))
+  (assert (list?   end))
+
+  (define dyn_env "loop_name" (+ ".loop" name))
+  (define dyn_env "loop_end"  (+ ".end"  name))
+
+  (list
+    (label loop_name)
+    (map (curry eval dyn_env) body)
+    (jmp   loop_name)
+    (label loop_end)
+    (map (curry eval dyn_env) end))
+ )))
+
+
+
+
 (func def_string_length () (begin
 (define (out (out dyn_env)) "_string_length" "string_length")
 (list
@@ -52,21 +72,16 @@
 
 (xor rax rax)    (comment (it is the return register, init to 0 and increment for each string character))
 
-(label ".loop")
+(loop "_string_len"
+  (
+    (cmpb "$0" (address_byte rdi rax))
+    (je loop_end)
+    (inc rax)
+	)
 
-(cmpb "$0" (address_byte rdi rax))
+  ( (ret) )
+  )
 
-(je ".end")
-
-(comment (TODO
-	 .end symbol must return ".end"
-	 how to get .end if it is defined later?))
-
-(inc rax)
-(jmp ".loop")
-
-(label ".end")
-(ret)
 " "
 )))
 
@@ -201,12 +216,6 @@
   (mov "$10" r8) (comment (divider))
 
   (comment (the place for the byte buffer on the stack))
-  (comment (
-  (mov rsp  r10) 
-  (sub "$8" r10)
-  (define "buffer_length" "$16")
-  (sub buffer_length r10)
-  ))
   (mov rsp r10) 
   (dec r10)
 
