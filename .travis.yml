@@ -1,5 +1,6 @@
 language: python
 before_install:
+    - pip install --upgrade pyparsing
     - pip install --upgrade pytest
     - python --version
     - pip    --version
